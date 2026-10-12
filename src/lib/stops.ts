@@ -34,12 +34,15 @@ export const STOP_TYPES: StopTypeDef[] = [
   { id: "vegan", label: "Vegan food", emoji: "🌱", osmFilter: `node["diet:vegan"~"yes|only|limited"]` },
 ];
 
+// NOTE: only global mirrors here. overpass.osm.ch holds Switzerland-only data
+// and returns 200 with EMPTY results for other regions — it silently broke
+// stop search outside CH, so it must stay last (Swiss fallback) or be removed.
 const OVERPASS_ENDPOINTS = [
-  "https://overpass.osm.ch/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
   "https://overpass-api.de/api/interpreter",
   "https://overpass.osm.jp/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
 ];
 
 const REQUEST_TIMEOUT_MS = 12000;
@@ -124,7 +127,19 @@ export async function findStops(
       }
       const text = await res.text();
       try {
-        return JSON.parse(text) as OverpassResult;
+        const parsed = JSON.parse(text) as OverpassResult;
+        // A regional mirror (e.g. osm.ch) can return 200 with zero elements for
+        // areas outside its coverage. Zero results are plausible in remote areas,
+        // so only trust them from the first global mirror; otherwise try the
+        // next endpoint to be safe.
+        if (
+          parsed.elements.length === 0 &&
+          endpoint.includes("osm.ch")
+        ) {
+          lastError = "server";
+          return null;
+        }
+        return parsed;
       } catch {
         if (/duplicate_query/.test(text)) {
           lastError = "dup";
