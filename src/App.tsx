@@ -55,11 +55,26 @@ export default function App() {
   const [weatherLoading, setWeatherLoading] = useState(false);
 
   const [stops, setStops] = useState<Stop[] | null>(null);
-  const [stopTypes, setStopTypes] = useState<Set<string>>(new Set(["water", "cafe", "bikeshop", "vegan"]));
+  const [stopTypes, setStopTypes] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("rc-stoptypes");
+      if (raw) {
+        const arr = JSON.parse(raw) as string[];
+        if (Array.isArray(arr) && arr.length) return new Set(arr);
+      }
+    } catch {}
+    return new Set(["water", "cafe", "bikeshop", "vegan"]);
+  });
   const [stopsLoading, setStopsLoading] = useState(false);
   const [stopsProgress, setStopsProgress] = useState<string | null>(null);
-  const [corridorM, setCorridorM] = useState(500);
-  const [autoMarkKm, setAutoMarkKm] = useState<number | null>(null);
+  const [corridorM, setCorridorM] = useState<number>(() => {
+    const v = Number(localStorage.getItem("rc-corridor"));
+    return v >= 100 && v <= 2000 ? v : 500;
+  });
+  const [autoMarkKm, setAutoMarkKm] = useState<number | null>(() => {
+    const v = Number(localStorage.getItem("rc-automark"));
+    return v > 0 ? v : null;
+  });
 
   const [effort, setEffort] = useState<"easy" | "moderate" | "hard">("moderate");
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -89,6 +104,7 @@ export default function App() {
       try {
         const r = await buildRoute(name, wps, prof);
         setRoute(r);
+        hasPlannedRef.current = true;
         setWeather(null);
         setStops(null);
       } catch (e) {
@@ -144,6 +160,45 @@ export default function App() {
   }, []);
 
   const doPlan = () => generateRoute(waypoints, profile, routeName);
+
+  useEffect(() => {
+    localStorage.setItem("rc-stoptypes", JSON.stringify([...stopTypes]));
+  }, [stopTypes]);
+  useEffect(() => {
+    localStorage.setItem("rc-corridor", String(corridorM));
+  }, [corridorM]);
+  useEffect(() => {
+    localStorage.setItem("rc-automark", String(autoMarkKm ?? 0));
+  }, [autoMarkKm]);
+
+  // Auto-replan (debounced) when waypoints change after the first plan.
+  // User clicks mid-planning won't thrash the router: 1.2s of quiet first.
+  const hasPlannedRef = useRef(false);
+  const wasInitializedRef = useRef(false);
+  const wpCountRef = useRef(waypoints.length);
+  useEffect(() => {
+    // skip the very first render (nothing to replan)
+    if (!wasInitializedRef.current) {
+      wasInitializedRef.current = true;
+      wpCountRef.current = waypoints.length;
+      return;
+    }
+    const countChanged = wpCountRef.current !== waypoints.length;
+    wpCountRef.current = waypoints.length;
+    if (!hasPlannedRef.current) {
+      // never planned yet: only auto-plan once user has >=2 waypoints
+      if (waypoints.length >= 2) {
+        hasPlannedRef.current = true;
+      }
+      return;
+    }
+    if (!countChanged) return;
+    const t = setTimeout(() => {
+      generateRoute(waypoints, profile, routeName);
+    }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waypoints]);
 
   const onImport = async (file: File) => {
     setLoading(true);
