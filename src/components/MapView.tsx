@@ -222,9 +222,19 @@ export default function MapView({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: styleUrl(isDarkRef.current),
-      center: [6.14, 46.2],
-      zoom: 12,
+      center: [-1.55, 53.1], // UK (Peak District) fallback
+      zoom: 11,
     });
+    // Try to open on the user's real location (permission-granted only)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          map.jumpTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 12 });
+        },
+        () => {},
+        { timeout: 5000, maximumAge: 600000 }
+      );
+    }
     map.addControl(new maplibregl.NavigationControl(), "top-left");
     map.on("click", (e) => {
       if (planRef.current) clickRef.current(e.lngLat.lat, e.lngLat.lng);

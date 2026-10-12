@@ -8,8 +8,9 @@ export function useUnits(): { units: UnitMode; setUnits: (u: UnitMode) => void }
   const [units, setUnitsState] = useState<UnitMode>(() => {
     const saved = localStorage.getItem(KEY);
     if (saved === "imperial" || saved === "metric") return saved;
-    // default from browser locale
-    const imperial = navigator.language.startsWith("en-US") || navigator.language.startsWith("en-LR");
+    // default from browser locale (UK uses miles for roads/cycling)
+    const loc = navigator.language;
+    const imperial = /en-(US|GB|LR)/.test(loc);
     return imperial ? "imperial" : "metric";
   });
   useEffect(() => {
