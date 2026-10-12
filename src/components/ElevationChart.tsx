@@ -15,9 +15,10 @@ interface Props {
   units: UnitMode;
   pois: ProfilePoi[];
   onHoverDist: (dist: number | null) => void;
+  mapHoverDist: number | null;
 }
 
-export default function ElevationChart({ points, units, pois, onHoverDist }: Props) {
+export default function ElevationChart({ points, units, pois, onHoverDist, mapHoverDist }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [hover, setHover] = useState<{ x: number; ele: number; dist: number } | null>(null);
   const hoverRef = useRef(onHoverDist);
@@ -98,6 +99,24 @@ export default function ElevationChart({ points, units, pois, onHoverDist }: Pro
     ctx.setLineDash([]);
     ctx.textAlign = "left";
 
+    // map-hover indicator
+    if (mapHoverDist != null && mapHoverDist >= 0 && mapHoverDist <= total) {
+      const px = x(mapHoverDist);
+      ctx.strokeStyle = "rgba(217, 70, 239, 0.7)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px, 20);
+      ctx.lineTo(px, H - 16);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(px, 20, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#d946ef";
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
     // POI markers (stops added to the route)
     for (const poi of pois) {
       const px = x(poi.dist);
@@ -174,7 +193,7 @@ export default function ElevationChart({ points, units, pois, onHoverDist }: Pro
       canvas.removeEventListener("mousemove", onMove);
       canvas.removeEventListener("mouseleave", onLeave);
     };
-  }, [points, pois, units]);
+  }, [points, pois, units, mapHoverDist]);
 
   return (
     <div className="elevation-wrap">

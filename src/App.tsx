@@ -43,6 +43,7 @@ export default function App() {
   const [routeName, setRouteName] = useState("My route");
   const [focusPoint, setFocusPoint] = useState<{ lat: number; lon: number } | null>(null);
   const [hoverDist, setHoverDist] = useState<number | null>(null);
+  const [mapHoverDist, setMapHoverDist] = useState<number | null>(null);
 
   const [weather, setWeather] = useState<WeatherStop[] | null>(null);
   const [weatherSpeed, setWeatherSpeed] = useState(25); // always km/h internally
@@ -582,12 +583,14 @@ export default function App() {
           kmLabels={kmMarks.labels}
           routePois={routePois}
           onPoiRemove={handlePoiRemove}
+          hoverDist={hoverDist}
+          onRouteHover={setMapHoverDist}
           onMapClick={addWaypoint}
           onWaypointRemove={removeWaypoint}
           onStopAddToRoute={handleStopAddToRoute}
         />
         <div className="elevation-panel">
-          <ElevationChart points={route?.points ?? []} units={units} pois={poiOnProfile} onHoverDist={setHoverDist} />
+          <ElevationChart points={route?.points ?? []} units={units} pois={poiOnProfile} onHoverDist={setHoverDist} mapHoverDist={mapHoverDist} />
         </div>
       </main>
     </div>

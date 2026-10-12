@@ -298,3 +298,10 @@ h1 svg { vertical-align: -3px; margin-right: 4px; color: var(--accent); }
   border-radius: 10px; cursor: pointer;
 }
 .poi-remove-btn:hover { background: var(--error-bg); color: var(--error-text); border-color: var(--error-border); }
+
+.hover-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #d946ef; border: 3px solid #fff;
+  box-shadow: 0 1px 6px rgba(217, 70, 239, 0.6);
+  pointer-events: none;
+}

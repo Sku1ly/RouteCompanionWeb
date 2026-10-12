@@ -158,6 +158,8 @@ interface MapViewProps {
   routePois: { lat: number; lon: number; name: string; emoji: string }[];
   kmMarkersM: number[]; // cumulative meters positions for distance badges
   kmLabels: string[]; // matching labels per badge index
+  hoverDist: number | null; // distance along route currently hovered (from chart)
+  onRouteHover: (dist: number | null) => void; // hover on map route line
 }
 
 export default function MapView({
@@ -175,6 +177,8 @@ export default function MapView({
   routePois,
   kmMarkersM,
   kmLabels,
+  hoverDist,
+  onRouteHover,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -194,6 +198,11 @@ export default function MapView({
   addStopRef.current = onStopAddToRoute;
   const poiRemoveRef = useRef(onPoiRemove);
   poiRemoveRef.current = onPoiRemove;
+  const routeHoverRef = useRef(onRouteHover);
+  routeHoverRef.current = onRouteHover;
+  const hoverMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const routePointsRef = useRef(routePoints);
+  routePointsRef.current = routePoints;
   const unitsRef = useRef(units);
   unitsRef.current = units;
 
@@ -425,6 +434,58 @@ export default function MapView({
     if (!map || !focusPoint) return;
     map.flyTo({ center: [focusPoint.lon, focusPoint.lat], zoom: Math.max(map.getZoom(), 14), duration: 800 });
   }, [focusPoint]);
+
+  // hover dot on map (driven by elevation profile hover)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    if (hoverDist == null || routePoints.length < 2) {
+      hoverMarkerRef.current?.remove();
+      hoverMarkerRef.current = null;
+      return;
+    }
+    const pos = interpolateAtDistance(routePoints, hoverDist);
+    const el = document.createElement("div");
+    el.className = "hover-dot";
+    if (!hoverMarkerRef.current) {
+      hoverMarkerRef.current = new maplibregl.Marker({ element: el }).setLngLat([pos.lon, pos.lat]).addTo(map);
+    } else {
+      hoverMarkerRef.current.setLngLat([pos.lon, pos.lat]);
+    }
+  }, [hoverDist, routePoints, ready]);
+
+  // map route hover -> report distance to chart
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const moveHandler = (e: maplibregl.MapMouseEvent) => {
+      const pts = routePointsRef.current;
+      if (pts.length < 2) return;
+      const rpx = e.point;
+      let best = Infinity;
+      let bestIdx = -1;
+      for (let i = 0; i < pts.length; i++) {
+        const pp = map.project([pts[i].lon, pts[i].lat]);
+        const d2 = (pp.x - rpx.x) ** 2 + (pp.y - rpx.y) ** 2;
+        if (d2 < best) {
+          best = d2;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx >= 0 && best < 144) {
+        map.getCanvas().style.cursor = "pointer";
+        routeHoverRef.current(pts[bestIdx].dist);
+      } else {
+        map.getCanvas().style.cursor = "";
+        routeHoverRef.current(null);
+      }
+    };
+    map.on("mousemove", moveHandler);
+    return () => {
+      map.off("mousemove", moveHandler);
+      map.getCanvas().style.cursor = "";
+    };
+  }, [ready]);
 
   useEffect(() => {
     const map = mapRef.current;
