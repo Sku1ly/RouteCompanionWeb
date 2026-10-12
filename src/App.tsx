@@ -371,7 +371,7 @@ export default function App() {
               {planningMode ? "✏️ Clicking adds waypoints" : "👁️ Browse mode"}
             </button>
             <button className="btn btn-primary" onClick={doPlan} disabled={loading || waypoints.length < 2}>
-              {loading ? "…" : "Plan route"}
+              {loading ? <><span className="spinner" /> Planning…</> : "Plan route"}
             </button>
             <button className="btn" onClick={() => { setWaypoints([]); setRoute(null); setWeather(null); setStops(null); setRoutePois([]); }}>
               <><TrashIcon /> Clear</>
