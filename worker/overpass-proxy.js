@@ -9,16 +9,20 @@
  * - Free tier: 100k requests/day, no credit card needed
  */
 
+// Mirrors NOT behind Cloudflare first — Workers fetching Cloudflare-proxied
+// sites hit 521/526 or hang. osm.ch last (Switzerland-only data).
 const UPSTREAMS = [
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
   "https://overpass-api.de/api/interpreter",
   "https://overpass.osm.jp/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
 ];
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_AGE_S = 6 * 60 * 60;
-const REQUEST_TIMEOUT_MS = 25000;
+const REQUEST_TIMEOUT_MS = 10000;
 
 const cache = new Map();
 
@@ -33,13 +37,8 @@ async function fetchFromUpstreams(query) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const res = await fetch(upstream, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "RouteCompanionWeb/1.0 (caching proxy)",
-        },
-        body: "data=" + encodeURIComponent(query),
+      const res = await fetch(`${upstream}?data=${encodeURIComponent(query)}`, {
+        method: "GET",
         signal: controller.signal,
       });
       clearTimeout(timer);
