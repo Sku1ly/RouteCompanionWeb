@@ -8,6 +8,7 @@ import { parseRouteFile, exportGpx, type GpxWaypoint } from "./lib/files";
 import { fetchRouteWeather, type WeatherStop } from "./lib/weather";
 import { findStops, STOP_TYPES, type Stop, type StopTypeDef } from "./lib/stops";
 import { planFuel } from "./lib/fuel";
+import { useTheme, type ThemeMode } from "./lib/theme";
 
 type Tab = "plan" | "weather" | "stops" | "fuel";
 
@@ -43,6 +44,7 @@ export default function App() {
 
   const [effort, setEffort] = useState<"easy" | "moderate" | "hard">("moderate");
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
 
   const generateRoute = useCallback(
     async (wps: LatLng[], prof: Profile, name: string) => {
@@ -195,6 +197,18 @@ export default function App() {
         <header className="brand">
           <h1>🗺️ Route Companion</h1>
           <p className="tagline">Plan it. Check it. Ride it.</p>
+          <div className="theme-toggle">
+            {(["auto", "light", "dark"] as ThemeMode[]).map((m) => (
+              <button
+                key={m}
+                className={`chip ${themeMode === m ? "chip-on" : ""}`}
+                onClick={() => setThemeMode(m)}
+                title={m === "auto" ? "Follow system" : m === "light" ? "Light" : "Dark"}
+              >
+                {m === "auto" ? "🌓" : m === "light" ? "☀️" : "🌙"}
+              </button>
+            ))}
+          </div>
         </header>
 
         <div className="file-row">
@@ -422,6 +436,7 @@ export default function App() {
           stops={mapStops}
           planningMode={planningMode}
           focusPoint={focusPoint}
+          isDark={isDark}
           onMapClick={addWaypoint}
           onWaypointRemove={removeWaypoint}
         />

@@ -23,8 +23,8 @@ html, body, #root { height: 100%; margin: 0; }
   --hover: #f1f5f9;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+[data-theme="dark"] {
+
     --bg: #0f172a;
     --panel: #1e293b;
     --border: #334155;
@@ -64,6 +64,8 @@ body { font-family: system-ui, -apple-system, sans-serif; color: var(--text); }
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
 .brand h1 { font-size: 20px; margin: 0; }
+.theme-toggle { display: flex; gap: 4px; margin-top: 6px; }
+.theme-toggle .chip { padding: 3px 8px; font-size: 14px; }
 .tagline { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
 
 .file-row { display: flex; gap: 8px; }
@@ -73,13 +75,14 @@ body { font-family: system-ui, -apple-system, sans-serif; color: var(--text); }
 .field label { font-size: 12px; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.03em; }
 .field input[type="text"], .field input:not([type]) {
   padding: 8px; border: 1px solid var(--border2); border-radius: 8px; font-size: 14px;
+  background: var(--panel); color: var(--text);
 }
 .field input[type="range"] { accent-color: var(--accent); }
-.field input[type="number"] { padding: 6px; border: 1px solid var(--border2); border-radius: 8px; }
+.field input[type="number"] { padding: 6px; border: 1px solid var(--border2); border-radius: 8px; background: var(--panel); color: var(--text); }
 
 .btn {
   padding: 8px 12px; border: 1px solid var(--border2); border-radius: 8px;
-  background: var(--panel); cursor: pointer; font-size: 14px;
+  background: var(--panel); color: var(--text); cursor: pointer; font-size: 14px;
 }
 .btn:hover:not(:disabled) { background: var(--hover); }
 .btn:disabled { opacity: 0.5; cursor: default; }

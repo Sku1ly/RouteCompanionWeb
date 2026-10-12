@@ -110,6 +110,7 @@ interface MapViewProps {
   stops: StopMarkerData[];
   planningMode: boolean;
   focusPoint: { lat: number; lon: number } | null;
+  isDark: boolean;
   onMapClick: (lat: number, lon: number) => void;
   onWaypointRemove: (index: number) => void;
 }
@@ -120,6 +121,7 @@ export default function MapView({
   stops,
   planningMode,
   focusPoint,
+  isDark,
   onMapClick,
   onWaypointRemove,
 }: MapViewProps) {
@@ -133,13 +135,15 @@ export default function MapView({
   clickRef.current = onMapClick;
   const planRef = useRef(planningMode);
   planRef.current = planningMode;
+  const isDarkRef = useRef(isDark);
+  isDarkRef.current = isDark;
+  const styleDarkRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: styleUrl(dark),
+      style: styleUrl(isDarkRef.current),
       center: [6.14, 46.2],
       zoom: 12,
     });
@@ -159,7 +163,7 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !ready) return;
     if (!map.getSource("route")) {
-      map.addImage("arrow-icon", makeArrowImageData(), { pixelRatio: 2 });
+      map.addImage("arrow-icon", makeArrowImageData());
       map.addSource("route-arrows", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -170,7 +174,7 @@ export default function MapView({
         source: "route-arrows",
         layout: {
           "icon-image": "arrow-icon",
-          "icon-size": 0.55,
+          "icon-size": 0.9,
           "icon-rotate": ["get", "bearing"],
           "icon-rotation-alignment": "map",
           "icon-allow-overlap": true,
@@ -269,19 +273,15 @@ export default function MapView({
   }, [focusPoint]);
 
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => {
-      const map = mapRef.current;
-      if (!map) return;
-      map.setStyle(styleUrl(mq.matches));
-      map.once("idle", () => {
-        setReady(false);
-        setTimeout(() => setReady(true), 0);
-      });
-    };
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
+    const map = mapRef.current;
+    if (!map || !ready || styleDarkRef.current === isDark) return;
+    styleDarkRef.current = isDark;
+    map.setStyle(styleUrl(isDark));
+    map.once("idle", () => {
+      setReady(false);
+      setTimeout(() => setReady(true), 0);
+    });
+  }, [isDark, ready]);
 
   useEffect(() => {
     const map = mapRef.current;
