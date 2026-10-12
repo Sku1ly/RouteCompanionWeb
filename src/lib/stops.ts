@@ -86,18 +86,31 @@ export async function findStops(
   const bbox = corridorBbox(route, corridorM);
   const bboxStr = `${bbox.south.toFixed(4)},${bbox.west.toFixed(4)},${bbox.north.toFixed(4)},${bbox.east.toFixed(4)}`;
   const filters = types.map((t) => t.osmFilter).join(";");
-  const query = `[out:json][timeout:25];(${types.map((t) => `${t.osmFilter}(${bboxStr});`).join("")});out body;`;
+  const baseQuery = `[out:json][timeout:25];(${types.map((t) => `${t.osmFilter}(${bboxStr});`).join("")});out body;`;
+  let attemptNo = 0;
+  const uniqueQuery = (): string => {
+    attemptNo++;
+    if (attemptNo === 1) return baseQuery;
+    // Overpass mirrors reject identical consecutive queries (duplicate_query error),
+    // so nudge the bbox by a sub-meter amount on retries to make each query unique.
+    const jitter = (attemptNo % 7) * 0.00001;
+    const jStr = `${(bbox.south + jitter).toFixed(5)},${bbox.west.toFixed(4)},${bbox.north.toFixed(4)},${bbox.east.toFixed(4)}`;
+    return `[out:json][timeout:25];(${types.map((t) => `${t.osmFilter}(${jStr});`).join("")});out body;`;
+  };
 
   interface OverpassElement { id: number; lat: number; lon: number; tags?: Record<string, string> }
   interface OverpassResult { elements: OverpassElement[] }
   let data: OverpassResult | null = null;
-  let lastError: "rate" | "server" | "network" | null = null;
+  let lastError: "rate" | "server" | "network" | "dup" | null = null;
 
   const attempt = async (endpoint: string): Promise<OverpassResult | null> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "data=" + encodeURIComponent(uniqueQuery()),
         signal: controller.signal,
       });
       if (res.status === 429) {
@@ -112,7 +125,11 @@ export async function findStops(
       try {
         return JSON.parse(text) as OverpassResult;
       } catch {
-        lastError = "server";
+        if (/duplicate_query/.test(text)) {
+          lastError = "dup";
+        } else {
+          lastError = "server";
+        }
         return null;
       }
     } catch {
