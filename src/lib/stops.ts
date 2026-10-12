@@ -34,10 +34,16 @@ export const STOP_TYPES: StopTypeDef[] = [
   { id: "vegan", label: "Vegan food", emoji: "🌱", osmFilter: `node["diet:vegan"~"yes|only|limited"]` },
 ];
 
+// Optional caching proxy (Cloudflare Worker). Set the URL after deploying
+// worker/overpass-proxy.js — the app uses it first and falls back to the
+// public mirrors automatically if it is unreachable.
+export const OVERPASS_PROXY_URL = ""; // e.g. "https://overpass-proxy.your-name.workers.dev"
+
 // NOTE: only global mirrors here. overpass.osm.ch holds Switzerland-only data
 // and returns 200 with EMPTY results for other regions — it silently broke
 // stop search outside CH, so it must stay last (Swiss fallback) or be removed.
 const OVERPASS_ENDPOINTS = [
+  ...(OVERPASS_PROXY_URL ? [OVERPASS_PROXY_URL] : []),
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
   "https://overpass-api.de/api/interpreter",

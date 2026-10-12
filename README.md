@@ -51,3 +51,18 @@ npm run typecheck
 
 No backend, no API keys. All data comes from free public APIs:
 OpenStreetMap tiles, OSRM (routing.openstreetmap.de), Open-Meteo, and Overpass.
+
+## Overpass caching proxy (optional, recommended)
+
+Public Overpass mirrors are rate-limited and flaky. A tiny Cloudflare Worker
+makes stop searches fast (6h cache) and reliable. Free tier: 100k req/day,
+no credit card.
+
+1. Cloudflare dashboard → **Workers & Pages** → **Create** → name it (e.g. `route-companion-overpass`)
+2. Paste the contents of [`worker/overpass-proxy.js`](worker/overpass-proxy.js) → **Deploy**
+   (or run `npx wrangler deploy` from the `worker/` folder)
+3. Copy your Worker URL (e.g. `https://route-companion-overpass.your-name.workers.dev`)
+4. Set it as `OVERPASS_PROXY_URL` in [`src/lib/stops.ts`](src/lib/stops.ts) and redeploy the app
+
+The app uses the proxy first and falls back to public mirrors automatically,
+so nothing breaks if the Worker is ever down.

@@ -1,0 +1,7 @@
+name = "route-companion-overpass"
+main = "overpass-proxy.js"
+compatibility_date = "2024-09-01"
+
+# Free tier — no payment method required.
+# Deploy with: npx wrangler deploy
+# (or paste overpass-proxy.js into the Cloudflare dashboard)
