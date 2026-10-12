@@ -31,6 +31,67 @@ interface StopMarkerData {
   offRoute?: number; // meters from route line
 }
 
+const ARROW_SIZE = 36;
+
+function makeArrowImage(map: maplibregl.Map): HTMLImageElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = ARROW_SIZE;
+  canvas.height = ARROW_SIZE;
+  const ctx = canvas.getContext("2d")!;
+  const cx = ARROW_SIZE / 2;
+  const r = ARROW_SIZE / 2 - 2;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+  ctx.strokeStyle = "rgba(8, 145, 178, 0.95)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cx, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "rgba(8, 145, 178, 1)";
+  ctx.beginPath();
+  ctx.moveTo(cx + 8, cx);
+  ctx.lineTo(cx - 6, cx - 7);
+  ctx.lineTo(cx - 2, cx);
+  ctx.lineTo(cx - 6, cx + 7);
+  ctx.closePath();
+  ctx.fill();
+  const img = new Image();
+  img.src = canvas.toDataURL();
+  return img;
+}
+
+function arrowFeatures(
+  points: { lat: number; lon: number }[]
+): GeoJSON.Feature<GeoJSON.Point>[] {
+  const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
+  if (points.length < 2) return features;
+  let lastPlaced = -Infinity;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    const segLen = Math.hypot((b.lon - a.lon) * 85, (b.lat - a.lat) * 111) * 1000;
+    if (segLen < 1) continue;
+    if (a.lat - lastPlaced < 1000 / 111000 && i !== 1) {
+      const prevF = features[features.length - 1];
+      if (prevF && Math.abs(a.lat - lastPlaced) < 0.004) continue;
+    }
+    lastPlaced = a.lat;
+    const y =
+      Math.sin(toRad(b.lon - a.lon)) * Math.cos(toRad(b.lat));
+    const x =
+      Math.cos(toRad(a.lat)) * Math.sin(toRad(b.lat)) -
+      Math.sin(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.cos(toRad(b.lon - a.lon));
+    const bearing = (Math.atan2(y, x) * 180) / Math.PI;
+    features.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [a.lon, a.lat] },
+      properties: { bearing },
+    });
+  }
+  return features;
+}
+
 interface MapViewProps {
   routePoints: { lat: number; lon: number }[];
   waypoints: { lat: number; lon: number }[];
@@ -85,6 +146,29 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !ready) return;
     if (!map.getSource("route")) {
+      map.addImage("arrow-icon", makeArrowImage(map), { pixelRatio: 2 });
+      map.addSource("route-arrows", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "route-arrows-layer",
+        type: "symbol",
+        source: "route-arrows",
+        layout: {
+          "icon-image": "arrow-icon",
+          "icon-size": 0.55,
+          "icon-rotate": ["get", "bearing"],
+          "icon-rotation-alignment": "map",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
+        paint: {
+          "icon-opacity": 0.9,
+        },
+      });
+    }
+    if (!map.getSource("route")) {
       map.addSource("route", {
         type: "geojson",
         data: { type: "Feature", geometry: { type: "LineString", coordinates: [] }, properties: {} },
@@ -112,6 +196,11 @@ export default function MapView({
         coordinates: routePoints.map((p) => [p.lon, p.lat]),
       },
       properties: {},
+    });
+    const arrows = map.getSource("route-arrows") as maplibregl.GeoJSONSource | undefined;
+    arrows?.setData({
+      type: "FeatureCollection",
+      features: arrowFeatures(routePoints),
     });
   }, [routePoints, ready]);
 
