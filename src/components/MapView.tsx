@@ -18,7 +18,7 @@ interface StopMarkerData {
   offRoute?: number; // meters from route line
 }
 
-const ARROW_SIZE = 36;
+const ARROW_SIZE = 28;
 
 function makeArrowImageData(): { width: number; height: number; data: Uint8Array } {
   const canvas = document.createElement("canvas");
@@ -26,22 +26,19 @@ function makeArrowImageData(): { width: number; height: number; data: Uint8Array
   canvas.height = ARROW_SIZE;
   const ctx = canvas.getContext("2d")!;
   const cx = ARROW_SIZE / 2;
-  const r = ARROW_SIZE / 2 - 2;
   ctx.clearRect(0, 0, ARROW_SIZE, ARROW_SIZE);
-  ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
-  ctx.strokeStyle = "rgba(8, 145, 178, 0.95)";
-  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.arc(cx, cx, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "rgba(8, 145, 178, 1)";
-  ctx.beginPath();
-  ctx.moveTo(cx + 8, cx);
-  ctx.lineTo(cx - 6, cx - 7);
-  ctx.lineTo(cx - 2, cx);
-  ctx.lineTo(cx - 6, cx + 7);
+  ctx.moveTo(cx, 3);
+  ctx.lineTo(cx + 9, ARROW_SIZE - 6);
+  ctx.lineTo(cx, ARROW_SIZE - 12);
+  ctx.lineTo(cx - 9, ARROW_SIZE - 6);
   ctx.closePath();
+  ctx.fillStyle = "rgba(8, 145, 178, 1)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
   ctx.fill();
   const imageData = ctx.getImageData(0, 0, ARROW_SIZE, ARROW_SIZE);
   return { width: ARROW_SIZE, height: ARROW_SIZE, data: new Uint8Array(imageData.data.buffer) };
@@ -174,7 +171,7 @@ export default function MapView({
         source: "route-arrows",
         layout: {
           "icon-image": "arrow-icon",
-          "icon-size": 0.9,
+          "icon-size": 1.0,
           "icon-rotate": ["get", "bearing"],
           "icon-rotation-alignment": "map",
           "icon-allow-overlap": true,
