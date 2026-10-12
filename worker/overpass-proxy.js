@@ -28,36 +28,51 @@ function cacheKey(query) {
 }
 
 async function fetchFromUpstreams(query) {
+  const errors = [];
   for (const upstream of UPSTREAMS) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const res = await fetch(upstream, {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "RouteCompanionWeb/1.0 (caching proxy)",
+        },
         body: "data=" + encodeURIComponent(query),
         signal: controller.signal,
       });
       clearTimeout(timer);
-      if (res.status === 429) continue;
-      if (!res.ok) continue;
+      if (res.status === 429) {
+        errors.push(`${upstream}: 429 rate-limited`);
+        continue;
+      }
+      if (!res.ok) {
+        errors.push(`${upstream}: HTTP ${res.status}`);
+        continue;
+      }
       const text = await res.text();
       let parsed;
       try {
         parsed = JSON.parse(text);
       } catch {
+        errors.push(`${upstream}: non-JSON response`);
         continue;
       }
       if (parsed && Array.isArray(parsed.elements)) {
-        return { status: 200, body: JSON.stringify(parsed) };
+        return { status: 200, body: JSON.stringify(parsed), errors };
       }
-    } catch {
-      // try next upstream
+      errors.push(`${upstream}: no elements array`);
+    } catch (e) {
+      errors.push(`${upstream}: ${e.name || "fetch error"}`);
     } finally {
       clearTimeout(timer);
     }
   }
-  return { status: 502, body: JSON.stringify({ error: "all upstreams failed" }) };
+  return {
+    status: 502,
+    body: JSON.stringify({ error: "all upstreams failed", detail: errors }),
+  };
 }
 
 export default {
