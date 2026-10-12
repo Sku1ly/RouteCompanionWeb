@@ -54,7 +54,7 @@ export default function App() {
   const [weatherLoading, setWeatherLoading] = useState(false);
 
   const [stops, setStops] = useState<Stop[] | null>(null);
-  const [stopTypes, setStopTypes] = useState<Set<string>>(new Set(["water", "cafe", "bikeshop"]));
+  const [stopTypes, setStopTypes] = useState<Set<string>>(new Set(["water", "cafe", "bikeshop", "vegan"]));
   const [stopsLoading, setStopsLoading] = useState(false);
   const [stopsProgress, setStopsProgress] = useState<string | null>(null);
   const [corridorM, setCorridorM] = useState(500);

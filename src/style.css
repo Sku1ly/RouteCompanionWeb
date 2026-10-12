@@ -318,3 +318,9 @@ h1 svg { vertical-align: -3px; margin-right: 4px; color: var(--accent); }
   text-overflow: ellipsis; white-space: nowrap;
 }
 .saved-routes .saved-name:hover { color: var(--accent-dark); text-decoration: underline; }
+
+.maps-link {
+  display: block; margin-top: 8px; font-size: 12px; color: var(--accent-dark);
+  text-decoration: none; text-align: center;
+}
+.maps-link:hover { text-decoration: underline; }

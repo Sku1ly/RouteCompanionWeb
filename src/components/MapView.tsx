@@ -102,6 +102,17 @@ function arrowFeatures(
   return features;
 }
 
+
+function mapsLinkEl(lat: number, lon: number): HTMLAnchorElement {
+  const a = document.createElement("a");
+  a.className = "maps-link";
+  a.href = `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(6)},${lon.toFixed(6)}`;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.textContent = "Open in Google Maps ↗";
+  return a;
+}
+
 function interpolateAtDistance(
   points: { lat: number; lon: number; dist: number }[],
   d: number
@@ -386,6 +397,7 @@ export default function MapView({
           addStopRef.current(s);
         };
         popupEl.appendChild(btn);
+        popupEl.appendChild(mapsLinkEl(s.lat, s.lon));
         new maplibregl.Popup({ closeOnClick: true, offset: 24 })
           .setLngLat([s.lon, s.lat])
           .setDOMContent(popupEl)
@@ -420,6 +432,7 @@ export default function MapView({
           poiRemoveRef.current(p);
         };
         popupEl.appendChild(btn);
+        popupEl.appendChild(mapsLinkEl(p.lat, p.lon));
         new maplibregl.Popup({ closeOnClick: true, offset: 24 })
           .setLngLat([p.lon, p.lat])
           .setDOMContent(popupEl)

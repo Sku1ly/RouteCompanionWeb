@@ -31,6 +31,7 @@ export const STOP_TYPES: StopTypeDef[] = [
   { id: "camping", label: "Camping", emoji: "🏕️", osmFilter: `node["tourism"~"camp_site|alpine_hut|wilderness_hut"]` },
   { id: "atm", label: "ATM", emoji: "🏧", osmFilter: `node["amenity"="atm"]` },
   { id: "hospital", label: "Hospital", emoji: "🏥", osmFilter: `node["amenity"~"hospital|clinic|doctors"]` },
+  { id: "vegan", label: "Vegan food", emoji: "🌱", osmFilter: `node["diet:vegan"~"yes|only|limited"]` },
 ];
 
 const OVERPASS_ENDPOINTS = [
@@ -163,11 +164,12 @@ export async function findStops(
   }
 
   const stops: Stop[] = [];
+  const selected = new Set(types.map((t) => t.id));
   for (const el of data.elements) {
     if (typeof el.lat !== "number" || typeof el.lon !== "number") continue;
     const { dist, off } = nearestOnRoute(route, el.lat, el.lon);
     if (off > corridorM) continue;
-    const type = matchType(el.tags ?? {});
+    const type = matchType(el.tags ?? {}, selected);
     if (!type) continue;
     stops.push({
       id: `n${el.id}`,
@@ -183,13 +185,26 @@ export async function findStops(
   return stops;
 }
 
-function matchType(tags: Record<string, string>): StopTypeDef | null {
+export function isVegan(tags: Record<string, string>): boolean {
+  return /yes|only/.test(tags["diet:vegan"] ?? "");
+}
+
+function matchType(tags: Record<string, string>, selected: Set<string>): StopTypeDef | null {
   const am = tags.amenity ?? "";
   const sh = tags.shop ?? "";
   const tu = tags.tourism ?? "";
+  const vegan = isVegan(tags);
+  // vegan wins over generic café when both categories are selected
+  if (vegan && selected.has("vegan")) {
+    for (const t of STOP_TYPES) {
+      if (t.id === "vegan") return t;
+    }
+  }
   for (const t of STOP_TYPES) {
+    if (!selected.has(t.id)) continue;
     if (t.id === "water" && /drinking_water|water_point/.test(am)) return t;
     if (t.id === "cafe" && /cafe|fast_food|restaurant|ice_cream|pub/.test(am)) return t;
+    if (t.id === "vegan" && vegan) return t;
     if (t.id === "bikeshop" && sh === "bicycle") return t;
     if (t.id === "grocery" && /supermarket|convenience|bakery/.test(sh)) return t;
     if (t.id === "gas" && am === "fuel") return t;
