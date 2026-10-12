@@ -312,3 +312,9 @@ h1 svg { vertical-align: -3px; margin-right: 4px; color: var(--accent); }
   border-radius: 50%; animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.saved-routes .saved-name {
+  flex: 1; font-size: 13px; font-weight: 500; cursor: pointer; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.saved-routes .saved-name:hover { color: var(--accent-dark); text-decoration: underline; }

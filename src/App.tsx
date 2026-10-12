@@ -20,6 +20,7 @@ import { parseRouteFile, exportGpx, type GpxWaypoint } from "./lib/files";
 import { fetchRouteWeather, type WeatherStop } from "./lib/weather";
 import { findStops, STOP_TYPES, type Stop, type StopTypeDef } from "./lib/stops";
 import { planFuel } from "./lib/fuel";
+import { listRoutes, saveRoute, deleteRoute, type SavedRoute } from "./lib/storage";
 import { useTheme, type ThemeMode } from "./lib/theme";
 
 type Tab = "plan" | "weather" | "stops" | "fuel";
@@ -44,6 +45,7 @@ export default function App() {
   const [focusPoint, setFocusPoint] = useState<{ lat: number; lon: number } | null>(null);
   const [hoverDist, setHoverDist] = useState<number | null>(null);
   const [mapHoverDist, setMapHoverDist] = useState<number | null>(null);
+  const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>(() => listRoutes());
 
   const [weather, setWeather] = useState<WeatherStop[] | null>(null);
   const [weatherSpeed, setWeatherSpeed] = useState(25); // always km/h internally
@@ -166,6 +168,38 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const doSave = () => {
+    if (!route) return;
+    try {
+      saveRoute(route, profile, routePois);
+      setSavedRoutes(listRoutes());
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    }
+  };
+
+  const doLoadSaved = (r: SavedRoute) => {
+    setRoute(r.route);
+    setRouteName(r.route.name);
+    setRoutePois(r.pois);
+    setWaypoints([
+      { lat: r.route.points[0].lat, lon: r.route.points[0].lon },
+      {
+        lat: r.route.points[r.route.points.length - 1].lat,
+        lon: r.route.points[r.route.points.length - 1].lon,
+      },
+    ]);
+    setWeather(null);
+    setStops(null);
+    setPlanningMode(false);
+  };
+
+  const doDeleteSaved = (id: string) => {
+    deleteRoute(id);
+    setSavedRoutes(listRoutes());
   };
 
   const doExport = () => {
@@ -325,6 +359,9 @@ export default function App() {
           <button className="btn" onClick={() => fileRef.current?.click()}>
             <ImportIcon /> Import
           </button>
+          <button className="btn" disabled={!route} onClick={doSave}>
+            💾 Save
+          </button>
           <input
             ref={fileRef}
             type="file"
@@ -393,6 +430,27 @@ export default function App() {
                     title="Remove POI"
                     onClick={() => handlePoiRemove(p)}
                   >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {savedRoutes.length > 0 && (
+          <div className="field">
+            <label>Saved routes</label>
+            <ul className="stop-list saved-routes">
+              {savedRoutes.map((r) => (
+                <li key={r.id} className="stop-item">
+                  <span className="saved-name" onClick={() => doLoadSaved(r)} title="Load route">
+                    {r.route.name}
+                  </span>
+                  <span className="stop-meta">
+                    {fmtDistance(r.route.distance, units)} · {new Date(r.savedAt).toLocaleDateString()}
+                  </span>
+                  <button className="poi-remove" title="Delete saved route" onClick={() => doDeleteSaved(r.id)}>
                     ×
                   </button>
                 </li>
