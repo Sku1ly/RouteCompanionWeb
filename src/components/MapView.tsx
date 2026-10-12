@@ -1,26 +1,11 @@
 import maplibregl from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 
-const OSM_TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
-const OSM_DARK_TILES = [
-  "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-];
-const ATTRIBUTION = "© OpenStreetMap contributors";
+const LIGHT_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const DARK_STYLE = "https://tiles.openfreemap.org/styles/dark";
 
-function osmStyle(dark: boolean) {
-  return {
-    version: 8 as const,
-    sources: {
-      osm: {
-        type: "raster" as const,
-        tiles: dark ? OSM_DARK_TILES : OSM_TILES,
-        tileSize: dark ? 512 : 256,
-        attribution: ATTRIBUTION,
-        maxzoom: 19,
-      },
-    },
-    layers: [{ id: "osm", type: "raster" as const, source: "osm" }],
-  };
+function styleUrl(dark: boolean): string {
+  return dark ? DARK_STYLE : LIGHT_STYLE;
 }
 
 interface StopMarkerData {
@@ -154,7 +139,7 @@ export default function MapView({
     const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: osmStyle(dark),
+      style: styleUrl(dark),
       center: [6.14, 46.2],
       zoom: 12,
     });
@@ -288,8 +273,8 @@ export default function MapView({
     const onChange = () => {
       const map = mapRef.current;
       if (!map) return;
-      map.setStyle(osmStyle(mq.matches), { diff: false });
-      map.once("styledata", () => {
+      map.setStyle(styleUrl(mq.matches));
+      map.once("idle", () => {
         setReady(false);
         setTimeout(() => setReady(true), 0);
       });
