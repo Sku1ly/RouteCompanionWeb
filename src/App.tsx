@@ -134,6 +134,11 @@ export default function App() {
     [route]
   );
 
+  const handlePoiRemove = useCallback((poi: { lat: number; lon: number }) => {
+    setRoutePois((prev) => prev.filter((p) => !(p.lat === poi.lat && p.lon === poi.lon)));
+    setWaypoints((prev) => prev.filter((w) => !(w.lat === poi.lat && w.lon === poi.lon)));
+  }, []);
+
   const doPlan = () => generateRoute(waypoints, profile, routeName);
 
   const onImport = async (file: File) => {
@@ -374,6 +379,27 @@ export default function App() {
           <p className="hint">{waypoints.length} waypoint{waypoints.length === 1 ? "" : "s"}</p>
         </div>
 
+        {routePois.length > 0 && (
+          <div className="field">
+            <label>POIs on route ({routePois.length})</label>
+            <ul className="stop-list">
+              {routePois.map((p) => (
+                <li key={`${p.lat},${p.lon}`} className="stop-item">
+                  <span>{p.emoji}</span>
+                  <span className="stop-name">{p.name}</span>
+                  <button
+                    className="poi-remove"
+                    title="Remove POI"
+                    onClick={() => handlePoiRemove(p)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {route && (
           <div className="route-stats">
             <div><span className="stat-num">{fmtDistance(route.distance, units)}</span><span className="stat-lbl">distance</span></div>
@@ -559,7 +585,7 @@ export default function App() {
           onStopAddToRoute={handleStopAddToRoute}
         />
         <div className="elevation-panel">
-          <ElevationChart points={route?.points ?? []} units={units} pois={poiOnProfile} onHoverDist={setHoverDist} />
+          <ElevationChart points={route?.points ?? []} units={units} pois={poiOnProfile} onHoverDist={setHoverDist} onPoiRemove={handlePoiRemove} />
         </div>
       </main>
     </div>

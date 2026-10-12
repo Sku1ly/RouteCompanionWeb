@@ -278,3 +278,9 @@ h1 svg { vertical-align: -3px; margin-right: 4px; color: var(--accent); }
   top: 0; left: 0; right: 0; height: 100%;
 }
 
+
+.poi-remove {
+  border: none; background: transparent; color: var(--muted); font-size: 16px;
+  cursor: pointer; padding: 2px 8px; border-radius: 6px; line-height: 1;
+}
+.poi-remove:hover { background: var(--error-bg); color: var(--error-text); }
