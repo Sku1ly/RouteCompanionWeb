@@ -21,7 +21,6 @@ import { fetchRouteWeather, type WeatherStop } from "./lib/weather";
 import { findStops, STOP_TYPES, type Stop, type StopTypeDef } from "./lib/stops";
 import { planFuel } from "./lib/fuel";
 import { useTheme, type ThemeMode } from "./lib/theme";
-import { useDesign, type DesignMode } from "./lib/design";
 
 type Tab = "plan" | "weather" | "stops" | "fuel";
 
@@ -62,7 +61,6 @@ export default function App() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const { units, setUnits } = useUnits();
-  const { design, setDesign } = useDesign();
   const [sheetCollapsed, setSheetCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(
     () => window.matchMedia("(max-width: 800px)").matches
@@ -277,21 +275,6 @@ export default function App() {
               title="Imperial: mi, ft, °F"
             >
               mi/ft
-            </button>
-            <span className="toggle-divider" />
-            <button
-              className={`chip ${design === "modern" ? "chip-on" : ""}`}
-              onClick={() => setDesign("modern")}
-              title="Modern design"
-            >
-              Modern
-            </button>
-            <button
-              className={`chip ${design === "material" ? "chip-on" : ""}`}
-              onClick={() => setDesign("material")}
-              title="Material Design 3"
-            >
-              Material
             </button>
           </div>
         </header>
