@@ -490,6 +490,32 @@ export default function App() {
           ))}
         </nav>
 
+        {tab === "plan" && route && (
+          <section className="panel">
+            <div className="route-stats route-stats-tall">
+              <div><span className="stat-num">{fmtDistance(route.distance, units)}</span><span className="stat-lbl">distance</span></div>
+              <div><span className="stat-num">↑{fmtElevation(route.ascent, units)}</span><span className="stat-lbl">ascent</span></div>
+              <div><span className="stat-num">↓{fmtElevation(route.descent, units)}</span><span className="stat-lbl">descent</span></div>
+            </div>
+            {route.points.length > 1 && (
+              <div className="route-stats">
+                <div><span className="stat-num">{fmtElevation(route.points[route.points.length - 1].ele, units)}</span><span className="stat-lbl">finish alt</span></div>
+                <div><span className="stat-num">{fmtElevation(Math.min(...route.points.map((p) => p.ele)), units)}</span><span className="stat-lbl">min alt</span></div>
+                <div><span className="stat-num">{fmtElevation(Math.max(...route.points.map((p) => p.ele)), units)}</span><span className="stat-lbl">max alt</span></div>
+              </div>
+            )}
+            {waypoints.length > 0 && (
+              <p className="hint">
+                {waypoints.length} waypoint{waypoints.length === 1 ? "" : "s"} · click a numbered
+                marker on the map to remove it · click the map to add more · replan after changes
+              </p>
+            )}
+            {routePois.length > 0 && (
+              <p className="hint">{routePois.length} POI{routePois.length === 1 ? "" : "s"} on route · click a magenta marker to remove</p>
+            )}
+          </section>
+        )}
+
         {tab === "weather" && (
           <section className="panel">
             <div className="field">
