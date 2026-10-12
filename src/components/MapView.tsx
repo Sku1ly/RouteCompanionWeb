@@ -1,25 +1,27 @@
 import maplibregl from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 
-const OSM_STYLE = {
-  version: 8 as const,
-  sources: {
-    osm: {
-      type: "raster" as const,
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      attribution: "© OpenStreetMap contributors",
-      maxzoom: 19,
+const OSM_TILES = ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
+const OSM_DARK_TILES = [
+  "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+];
+const ATTRIBUTION = "© OpenStreetMap contributors";
+
+function osmStyle(dark: boolean) {
+  return {
+    version: 8 as const,
+    sources: {
+      osm: {
+        type: "raster" as const,
+        tiles: dark ? OSM_DARK_TILES : OSM_TILES,
+        tileSize: dark ? 512 : 256,
+        attribution: ATTRIBUTION,
+        maxzoom: 19,
+      },
     },
-  },
-  layers: [
-    {
-      id: "osm",
-      type: "raster" as const,
-      source: "osm",
-    },
-  ],
-};
+    layers: [{ id: "osm", type: "raster" as const, source: "osm" }],
+  };
+}
 
 interface StopMarkerData {
   id: string;
@@ -33,13 +35,14 @@ interface StopMarkerData {
 
 const ARROW_SIZE = 36;
 
-function makeArrowImage(map: maplibregl.Map): HTMLImageElement {
+function makeArrowImageData(): { width: number; height: number; data: Uint8Array } {
   const canvas = document.createElement("canvas");
   canvas.width = ARROW_SIZE;
   canvas.height = ARROW_SIZE;
   const ctx = canvas.getContext("2d")!;
   const cx = ARROW_SIZE / 2;
   const r = ARROW_SIZE / 2 - 2;
+  ctx.clearRect(0, 0, ARROW_SIZE, ARROW_SIZE);
   ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
   ctx.strokeStyle = "rgba(8, 145, 178, 0.95)";
   ctx.lineWidth = 2;
@@ -55,39 +58,63 @@ function makeArrowImage(map: maplibregl.Map): HTMLImageElement {
   ctx.lineTo(cx - 6, cx + 7);
   ctx.closePath();
   ctx.fill();
-  const img = new Image();
-  img.src = canvas.toDataURL();
-  return img;
+  const imageData = ctx.getImageData(0, 0, ARROW_SIZE, ARROW_SIZE);
+  return { width: ARROW_SIZE, height: ARROW_SIZE, data: new Uint8Array(imageData.data.buffer) };
 }
+
+function toRad(d: number): number {
+  return (d * Math.PI) / 180;
+}
+
+function bearingDeg(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number }
+): number {
+  const y = Math.sin(toRad(b.lon - a.lon)) * Math.cos(toRad(b.lat));
+  const x =
+    Math.cos(toRad(a.lat)) * Math.sin(toRad(b.lat)) -
+    Math.sin(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.cos(toRad(b.lon - a.lon));
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}
+
+const R_EARTH = 6371000;
+
+function segMeters(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number }
+): number {
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R_EARTH * Math.asin(Math.sqrt(h));
+}
+
+const ARROW_SPACING_M = 1200;
 
 function arrowFeatures(
   points: { lat: number; lon: number }[]
 ): GeoJSON.Feature<GeoJSON.Point>[] {
   const features: GeoJSON.Feature<GeoJSON.Point>[] = [];
   if (points.length < 2) return features;
-  let lastPlaced = -Infinity;
-  const toRad = (d: number) => (d * Math.PI) / 180;
+  let sinceLast = ARROW_SPACING_M;
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1];
     const b = points[i];
-    const segLen = Math.hypot((b.lon - a.lon) * 85, (b.lat - a.lat) * 111) * 1000;
-    if (segLen < 1) continue;
-    if (a.lat - lastPlaced < 1000 / 111000 && i !== 1) {
-      const prevF = features[features.length - 1];
-      if (prevF && Math.abs(a.lat - lastPlaced) < 0.004) continue;
+    const d = segMeters(a, b);
+    if (d < 0.5) continue;
+    sinceLast += d;
+    if (sinceLast >= ARROW_SPACING_M) {
+      const midLon = a.lon + (b.lon - a.lon) / 2;
+      const midLat = a.lat + (b.lat - a.lat) / 2;
+      features.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [midLon, midLat] },
+        properties: { bearing: bearingDeg(a, b) },
+      });
+      sinceLast = 0;
     }
-    lastPlaced = a.lat;
-    const y =
-      Math.sin(toRad(b.lon - a.lon)) * Math.cos(toRad(b.lat));
-    const x =
-      Math.cos(toRad(a.lat)) * Math.sin(toRad(b.lat)) -
-      Math.sin(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.cos(toRad(b.lon - a.lon));
-    const bearing = (Math.atan2(y, x) * 180) / Math.PI;
-    features.push({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [a.lon, a.lat] },
-      properties: { bearing },
-    });
   }
   return features;
 }
@@ -124,9 +151,10 @@ export default function MapView({
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: OSM_STYLE,
+      style: osmStyle(dark),
       center: [6.14, 46.2],
       zoom: 12,
     });
@@ -146,7 +174,7 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !ready) return;
     if (!map.getSource("route")) {
-      map.addImage("arrow-icon", makeArrowImage(map), { pixelRatio: 2 });
+      map.addImage("arrow-icon", makeArrowImageData(), { pixelRatio: 2 });
       map.addSource("route-arrows", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -254,6 +282,21 @@ export default function MapView({
     if (!map || !focusPoint) return;
     map.flyTo({ center: [focusPoint.lon, focusPoint.lat], zoom: Math.max(map.getZoom(), 14), duration: 800 });
   }, [focusPoint]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      const map = mapRef.current;
+      if (!map) return;
+      map.setStyle(osmStyle(mq.matches), { diff: false });
+      map.once("styledata", () => {
+        setReady(false);
+        setTimeout(() => setReady(true), 0);
+      });
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;

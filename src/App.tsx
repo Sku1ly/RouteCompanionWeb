@@ -4,7 +4,7 @@ import ElevationChart from "./components/ElevationChart";
 import type { LatLng, PlannedRoute } from "./lib/geo";
 import { formatDistance } from "./lib/geo";
 import { buildRoute, type Profile } from "./lib/routing";
-import { parseRouteFile, exportGpx } from "./lib/files";
+import { parseRouteFile, exportGpx, type GpxWaypoint } from "./lib/files";
 import { fetchRouteWeather, type WeatherStop } from "./lib/weather";
 import { findStops, STOP_TYPES, type Stop, type StopTypeDef } from "./lib/stops";
 import { planFuel } from "./lib/fuel";
@@ -109,11 +109,21 @@ export default function App() {
 
   const doExport = () => {
     if (!route) return;
-    const gpx = exportGpx(route);
+    const list = autoMarked ?? stops ?? [];
+    const wpts: GpxWaypoint[] = list.map((s) => {
+      const remainingKm = Math.max(0, Math.round((route.distance - s.dist) / 1000));
+      return {
+        lat: s.lat,
+        lon: s.lon,
+        name: `${s.type.emoji} ${s.name} · ${remainingKm} km to go`,
+        symbol: gpxSymbol(s.type.id),
+      };
+    });
+    const gpx = exportGpx(route, wpts);
     const blob = new Blob([gpx], { type: "application/gpx+xml" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${route.name.replace(/[^\w\- ]+/g, "_")}.gpx`;
+    a.download = `${route.name.replace(/[^\w\- ]+/g, "_")}${list.length ? "-stops" : ""}.gpx`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -421,6 +431,24 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+function gpxSymbol(typeId: string): string {
+  const map: Record<string, string> = {
+    water: "Drinking Water",
+    cafe: "Restaurant",
+    bikeshop: "Bike Shop",
+    grocery: "Grocery Store",
+    gas: "Gas Station",
+    toilets: "Restroom",
+    pharmacy: "Pharmacy",
+    repair: "Bike Shop",
+    shelter: "Shelter",
+    camping: "Campground",
+    atm: "Bank",
+    hospital: "Hospital",
+  };
+  return map[typeId] ?? "Flag, Red";
 }
 
 function pointOnRoute(route: PlannedRoute, dist: number) {

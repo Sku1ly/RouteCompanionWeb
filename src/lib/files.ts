@@ -72,11 +72,26 @@ function parseTcx(text: string, filename: string): PlannedRoute {
   return buildRoute(name, coords);
 }
 
-export function exportGpx(route: PlannedRoute): string {
+export interface GpxWaypoint {
+  lat: number;
+  lon: number;
+  name: string;
+  symbol?: string;
+}
+
+export function exportGpx(route: PlannedRoute, waypoints: GpxWaypoint[] = []): string {
   const pts = route.points
     .map(
       (p) =>
         `      <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lon.toFixed(6)}"><ele>${p.ele.toFixed(1)}</ele></trkpt>`
+    )
+    .join("\n");
+  const wpts = waypoints
+    .map(
+      (w) =>
+        `  <wpt lat="${w.lat.toFixed(6)}" lon="${w.lon.toFixed(6)}">
+    <name>${escapeXml(w.name)}</name>${w.symbol ? `\n    <sym>${escapeXml(w.symbol)}</sym>` : ""}
+  </wpt>`
     )
     .join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -84,6 +99,7 @@ export function exportGpx(route: PlannedRoute): string {
   <metadata>
     <name>${escapeXml(route.name)}</name>
   </metadata>
+${wpts}
   <trk>
     <name>${escapeXml(route.name)}</name>
     <trkseg>
