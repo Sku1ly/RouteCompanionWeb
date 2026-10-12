@@ -36,6 +36,9 @@ export const STOP_TYPES: StopTypeDef[] = [
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
+  "https://overpass.osm.jp/api/interpreter",
 ];
 
 function corridorBbox(
@@ -85,23 +88,51 @@ export async function findStops(
   interface OverpassElement { id: number; lat: number; lon: number; tags?: Record<string, string> }
   interface OverpassResult { elements: OverpassElement[] }
   let data: OverpassResult | null = null;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
+  let lastError: "rate" | "server" | "network" | null = null;
+
+  const attempt = async (endpoint: string): Promise<OverpassResult | null> => {
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-        body: "data=" + encodeURIComponent(query),
-      });
-      if (!res.ok) continue;
-      data = (await res.json()) as OverpassResult;
-      break;
+      const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`);
+      if (res.status === 429) {
+        lastError = "rate";
+        return null;
+      }
+      if (!res.ok) {
+        lastError = "server";
+        return null;
+      }
+      const text = await res.text();
+      try {
+        return JSON.parse(text) as OverpassResult;
+      } catch {
+        lastError = "server";
+        return null;
+      }
     } catch {
-      // try next endpoint
+      lastError = "network";
+      return null;
+    }
+  };
+
+  outer: for (let round = 0; round < 3; round++) {
+    if (round > 0) {
+      await new Promise((r) => setTimeout(r, 1500 * round));
+    }
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+      const result = await attempt(endpoint);
+      if (result) {
+        data = result;
+        break outer;
+      }
     }
   }
-  if (!data) throw new Error("Stop lookup failed (Overpass unreachable)");
+  if (!data) {
+    if (lastError === "rate")
+      throw new Error("Overpass is rate-limiting right now — wait ~30s and try again");
+    if (lastError === "server")
+      throw new Error("Overpass servers are overloaded right now — try again shortly");
+    throw new Error("Could not reach any Overpass server — check your connection");
+  }
 
   const stops: Stop[] = [];
   for (const el of data.elements) {
