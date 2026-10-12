@@ -468,14 +468,6 @@ export default function App() {
           </div>
         )}
 
-        {route && (
-          <div className="route-stats">
-            <div><span className="stat-num">{fmtDistance(route.distance, units)}</span><span className="stat-lbl">distance</span></div>
-            <div><span className="stat-num">↑{fmtElevation(route.ascent, units)}</span><span className="stat-lbl">ascent</span></div>
-            <div><span className="stat-num">↓{fmtElevation(route.descent, units)}</span><span className="stat-lbl">descent</span></div>
-          </div>
-        )}
-
         {error && <div className="error">⚠️ {error}</div>}
 
         <nav className="tabs">
