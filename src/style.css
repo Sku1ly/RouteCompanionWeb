@@ -77,7 +77,8 @@ h1 svg { vertical-align: -3px; margin-right: 4px; color: var(--accent); }
 .tagline { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
 
 .file-row { display: flex; gap: 8px; }
-.file-row .btn { flex: 1; }
+.file-row .btn { flex: 1; padding: 10px 8px; font-size: 13.5px; }
+.file-row .btn svg { opacity: 0.65; }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 12px; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.03em; }

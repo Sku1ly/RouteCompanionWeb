@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapView from "./components/MapView";
-import { ImportIcon, ExportIcon, TrashIcon, RouteIcon } from "./components/icons";
+import { ImportIcon, ExportIcon, TrashIcon, RouteIcon, BookmarkIcon } from "./components/icons";
 import ElevationChart from "./components/ElevationChart";
 import type { LatLng, PlannedRoute } from "./lib/geo";
 import { formatDistance } from "./lib/geo";
@@ -363,8 +363,8 @@ export default function App() {
           <button className="btn" onClick={() => fileRef.current?.click()}>
             <ImportIcon /> Import
           </button>
-          <button className="btn" disabled={!route} onClick={doSave}>
-            💾 Save
+          <button className="btn" disabled={!route} onClick={doSave} title="Save route to this browser">
+            <BookmarkIcon /> Save
           </button>
           <input
             ref={fileRef}
