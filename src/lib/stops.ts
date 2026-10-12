@@ -86,6 +86,9 @@ export async function findStops(
   corridorM: number,
   onProgress?: (msg: string) => void
 ): Promise<Stop[]> {
+  // corridorM is the SEARCH radius (bbox + retention). Callers should pass a
+  // generous max (e.g. 2000) and re-filter results client-side for instant
+  // corridor adjustments without re-querying Overpass.
   if (!types.length || !route.points.length) return [];
   const bbox = corridorBbox(route, corridorM);
   const bboxStr = `${bbox.south.toFixed(4)},${bbox.west.toFixed(4)},${bbox.north.toFixed(4)},${bbox.east.toFixed(4)}`;

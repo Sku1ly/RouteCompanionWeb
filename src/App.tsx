@@ -205,7 +205,7 @@ export default function App() {
 
   const doExport = () => {
     if (!route) return;
-    const list = autoMarked ?? stops ?? [];
+    const list = autoMarked ?? visibleStops ?? [];
     const wpts: GpxWaypoint[] = list.map((s) => {
       const remainingM = Math.max(0, route.distance - s.dist);
       return {
@@ -246,7 +246,7 @@ export default function App() {
     setHiddenTypes(new Set());
     try {
       const types = STOP_TYPES.filter((t) => stopTypes.has(t.id));
-      const s = await findStops(route, types, corridorM, setStopsProgress);
+      const s = await findStops(route, types, 2000, setStopsProgress);
       setStops(s);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Stop lookup failed");
@@ -256,18 +256,23 @@ export default function App() {
     }
   };
 
+  const visibleStops = useMemo(() => {
+    if (!stops) return null;
+    return stops.filter((s) => s.offRoute <= corridorM);
+  }, [stops, corridorM]);
+
   const autoMarked = useMemo(() => {
-    if (!stops || !autoMarkKm || autoMarkKm <= 0) return null;
+    if (!visibleStops || !autoMarkKm || autoMarkKm <= 0) return null;
     const marked: Stop[] = [];
     let nextAt = autoMarkKm * 1000;
-    for (const s of stops) {
+    for (const s of visibleStops) {
       if (s.dist >= nextAt) {
         marked.push(s);
         nextAt += autoMarkKm * 1000;
       }
     }
     return marked;
-  }, [stops, autoMarkKm]);
+  }, [visibleStops, autoMarkKm]);
 
   const poiOnProfile = useMemo(() => {
     if (!route || routePois.length === 0) return [];
@@ -303,7 +308,7 @@ export default function App() {
   }, [route, weather, effort]);
 
   const mapStops = useMemo(() => {
-    const list = autoMarked ?? stops ?? [];
+    const list = autoMarked ?? visibleStops ?? [];
     return list
       .filter((s) => !hiddenTypes.has(s.type.id))
       .map((s) => ({
@@ -315,7 +320,7 @@ export default function App() {
         distAlong: s.dist,
         offRoute: s.offRoute,
       }));
-  }, [stops, autoMarked, hiddenTypes]);
+  }, [visibleStops, autoMarked, hiddenTypes]);
 
   return (
     <div className="app">
@@ -579,7 +584,7 @@ export default function App() {
             </button>
             {stops && (
               <>
-                <p className="hint">{stops.length} stops in corridor</p>
+                <p className="hint">{visibleStops?.length ?? 0} of {stops?.length ?? 0} stops shown</p>
                 <div className="stop-types hide-filter">
                   {STOP_TYPES.filter((t) => stops.some((s) => s.type.id === t.id)).map((t) => (
                     <label
