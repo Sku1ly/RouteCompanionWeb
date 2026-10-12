@@ -46,6 +46,7 @@ export default function App() {
   const [hoverDist, setHoverDist] = useState<number | null>(null);
   const [mapHoverDist, setMapHoverDist] = useState<number | null>(null);
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>(() => listRoutes());
+  const [hiddenTypes, setHiddenTypes] = useState<Set<string>>(new Set());
 
   const [weather, setWeather] = useState<WeatherStop[] | null>(null);
   const [weatherSpeed, setWeatherSpeed] = useState(25); // always km/h internally
@@ -242,6 +243,7 @@ export default function App() {
     setStopsLoading(true);
     setStopsProgress(null);
     setError(null);
+    setHiddenTypes(new Set());
     try {
       const types = STOP_TYPES.filter((t) => stopTypes.has(t.id));
       const s = await findStops(route, types, corridorM, setStopsProgress);
@@ -302,16 +304,18 @@ export default function App() {
 
   const mapStops = useMemo(() => {
     const list = autoMarked ?? stops ?? [];
-    return list.map((s) => ({
-      id: s.id,
-      lat: s.lat,
-      lon: s.lon,
-      name: s.name,
-      emoji: s.type.emoji,
-      distAlong: s.dist,
-      offRoute: s.offRoute,
-    }));
-  }, [stops, autoMarked]);
+    return list
+      .filter((s) => !hiddenTypes.has(s.type.id))
+      .map((s) => ({
+        id: s.id,
+        lat: s.lat,
+        lon: s.lon,
+        name: s.name,
+        emoji: s.type.emoji,
+        distAlong: s.dist,
+        offRoute: s.offRoute,
+      }));
+  }, [stops, autoMarked, hiddenTypes]);
 
   return (
     <div className="app">
@@ -576,6 +580,29 @@ export default function App() {
             {stops && (
               <>
                 <p className="hint">{stops.length} stops in corridor</p>
+                <div className="stop-types hide-filter">
+                  {STOP_TYPES.filter((t) => stops.some((s) => s.type.id === t.id)).map((t) => (
+                    <label
+                      key={t.id}
+                      className={`chip ${!hiddenTypes.has(t.id) ? "chip-on" : ""}`}
+                      title={hiddenTypes.has(t.id) ? "Hidden — click to show" : "Shown — click to hide"}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!hiddenTypes.has(t.id)}
+                        onChange={(e) =>
+                          setHiddenTypes((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.delete(t.id);
+                            else next.add(t.id);
+                            return next;
+                          })
+                        }
+                      />
+                      {t.emoji} {t.label}
+                    </label>
+                  ))}
+                </div>
                 <ul className="stop-list">
                   {(autoMarked ?? stops).map((s) => (
                     <li key={s.id} className="stop-item" onClick={() => setFocusPoint({ lat: s.lat, lon: s.lon })}>

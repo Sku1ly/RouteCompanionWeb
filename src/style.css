@@ -324,3 +324,11 @@ h1 svg { vertical-align: -3px; margin-right: 4px; color: var(--accent); }
   text-decoration: none; text-align: center;
 }
 .maps-link:hover { text-decoration: underline; }
+
+.hide-filter {
+  padding: 6px 8px;
+  border: 1px dashed var(--border2);
+  border-radius: 10px;
+}
+.hide-filter .chip { opacity: 0.45; }
+.hide-filter .chip-on { opacity: 1; }
