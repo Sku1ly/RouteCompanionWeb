@@ -34,12 +34,14 @@ export const STOP_TYPES: StopTypeDef[] = [
 ];
 
 const OVERPASS_ENDPOINTS = [
-  "https://overpass-api.de/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
-  "https://overpass.osm.ch/api/interpreter",
+  "https://overpass-api.de/api/interpreter",
   "https://overpass.osm.jp/api/interpreter",
 ];
+
+const REQUEST_TIMEOUT_MS = 12000;
 
 function corridorBbox(
   route: PlannedRoute,
@@ -77,7 +79,8 @@ function nearestOnRoute(route: PlannedRoute, lat: number, lon: number) {
 export async function findStops(
   route: PlannedRoute,
   types: StopTypeDef[],
-  corridorM: number
+  corridorM: number,
+  onProgress?: (msg: string) => void
 ): Promise<Stop[]> {
   if (!types.length || !route.points.length) return [];
   const bbox = corridorBbox(route, corridorM);
@@ -91,8 +94,12 @@ export async function findStops(
   let lastError: "rate" | "server" | "network" | null = null;
 
   const attempt = async (endpoint: string): Promise<OverpassResult | null> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`);
+      const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, {
+        signal: controller.signal,
+      });
       if (res.status === 429) {
         lastError = "rate";
         return null;
@@ -111,14 +118,18 @@ export async function findStops(
     } catch {
       lastError = "network";
       return null;
+    } finally {
+      clearTimeout(timer);
     }
   };
 
   outer: for (let round = 0; round < 3; round++) {
     if (round > 0) {
+      onProgress?.(`Overpass busy — retrying (attempt ${round + 1}/3)…`);
       await new Promise((r) => setTimeout(r, 1500 * round));
     }
     for (const endpoint of OVERPASS_ENDPOINTS) {
+      if (round === 0) onProgress?.("Searching OpenStreetMap…");
       const result = await attempt(endpoint);
       if (result) {
         data = result;

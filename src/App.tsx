@@ -39,6 +39,7 @@ export default function App() {
   const [stops, setStops] = useState<Stop[] | null>(null);
   const [stopTypes, setStopTypes] = useState<Set<string>>(new Set(["water", "cafe", "bikeshop"]));
   const [stopsLoading, setStopsLoading] = useState(false);
+  const [stopsProgress, setStopsProgress] = useState<string | null>(null);
   const [corridorM, setCorridorM] = useState(500);
   const [autoMarkKm, setAutoMarkKm] = useState<number | null>(null);
 
@@ -147,15 +148,17 @@ export default function App() {
   const doStops = async () => {
     if (!route) return;
     setStopsLoading(true);
+    setStopsProgress(null);
     setError(null);
     try {
       const types = STOP_TYPES.filter((t) => stopTypes.has(t.id));
-      const s = await findStops(route, types, corridorM);
+      const s = await findStops(route, types, corridorM, setStopsProgress);
       setStops(s);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Stop lookup failed");
     } finally {
       setStopsLoading(false);
+      setStopsProgress(null);
     }
   };
 
@@ -372,7 +375,7 @@ export default function App() {
               />
             </div>
             <button className="btn btn-primary" disabled={!route || stopsLoading} onClick={doStops}>
-              {stopsLoading ? "Searching…" : "Find stops on route"}
+              {stopsLoading ? (stopsProgress ?? "Searching…") : "Find stops on route"}
             </button>
             {stops && (
               <>
