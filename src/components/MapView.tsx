@@ -154,6 +154,8 @@ interface MapViewProps {
   onMapClick: (lat: number, lon: number) => void;
   onWaypointRemove: (index: number) => void;
   onStopAddToRoute: (stop: StopMarkerData) => void;
+  onPoiRemove: (poi: { lat: number; lon: number; name: string; emoji: string }) => void;
+  routePois: { lat: number; lon: number; name: string; emoji: string }[];
   kmMarkersM: number[]; // cumulative meters positions for distance badges
   kmLabels: string[]; // matching labels per badge index
 }
@@ -169,6 +171,8 @@ export default function MapView({
   onMapClick,
   onWaypointRemove,
   onStopAddToRoute,
+  onPoiRemove,
+  routePois,
   kmMarkersM,
   kmLabels,
 }: MapViewProps) {
@@ -176,6 +180,7 @@ export default function MapView({
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const stopMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const poiMarkersRef = useRef<maplibregl.Marker[]>([]);
   const [ready, setReady] = useState(false);
 
   const clickRef = useRef(onMapClick);
@@ -187,6 +192,8 @@ export default function MapView({
   const styleDarkRef = useRef<boolean | null>(null);
   const addStopRef = useRef(onStopAddToRoute);
   addStopRef.current = onStopAddToRoute;
+  const poiRemoveRef = useRef(onPoiRemove);
+  poiRemoveRef.current = onPoiRemove;
   const unitsRef = useRef(units);
   unitsRef.current = units;
 
@@ -379,6 +386,39 @@ export default function MapView({
       return new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(map);
     });
   }, [stops, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    poiMarkersRef.current.forEach((m) => m.remove());
+    poiMarkersRef.current = routePois.map((p) => {
+      const el = document.createElement("div");
+      el.className = "poi-marker";
+      el.textContent = p.emoji;
+      el.title = `${p.name} — on route`;
+      el.onclick = (ev) => {
+        ev.stopPropagation();
+        const popupEl = document.createElement("div");
+        popupEl.className = "stop-popup";
+        const textEl = document.createElement("div");
+        textEl.textContent = p.name;
+        popupEl.appendChild(textEl);
+        const btn = document.createElement("button");
+        btn.className = "btn poi-remove-btn";
+        btn.textContent = "Remove from route";
+        btn.onclick = (bev) => {
+          bev.stopPropagation();
+          poiRemoveRef.current(p);
+        };
+        popupEl.appendChild(btn);
+        new maplibregl.Popup({ closeOnClick: true, offset: 24 })
+          .setLngLat([p.lon, p.lat])
+          .setDOMContent(popupEl)
+          .addTo(map);
+      };
+      return new maplibregl.Marker({ element: el }).setLngLat([p.lon, p.lat]).addTo(map);
+    });
+  }, [routePois, ready]);
 
   useEffect(() => {
     const map = mapRef.current;

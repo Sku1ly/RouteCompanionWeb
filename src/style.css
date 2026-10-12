@@ -284,3 +284,17 @@ h1 svg { vertical-align: -3px; margin-right: 4px; color: var(--accent); }
   cursor: pointer; padding: 2px 8px; border-radius: 6px; line-height: 1;
 }
 .poi-remove:hover { background: var(--error-bg); color: var(--error-text); }
+
+.poi-marker {
+  font-size: 17px; background: #fff; border-radius: 50%; padding: 3px;
+  border: 2px solid rgb(217, 70, 239);
+  box-shadow: 0 2px 6px rgba(217, 70, 239, 0.4); cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.poi-marker:hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(217, 70, 239, 0.55); }
+.poi-remove-btn {
+  margin-top: 8px; width: 100%; font-size: 13px; padding: 6px 8px;
+  border: 1px solid var(--border2); background: var(--panel); color: var(--text);
+  border-radius: 10px; cursor: pointer;
+}
+.poi-remove-btn:hover { background: var(--error-bg); color: var(--error-text); border-color: var(--error-border); }

@@ -580,12 +580,14 @@ export default function App() {
           units={units}
           kmMarkersM={kmMarks.ms}
           kmLabels={kmMarks.labels}
+          routePois={routePois}
+          onPoiRemove={handlePoiRemove}
           onMapClick={addWaypoint}
           onWaypointRemove={removeWaypoint}
           onStopAddToRoute={handleStopAddToRoute}
         />
         <div className="elevation-panel">
-          <ElevationChart points={route?.points ?? []} units={units} pois={poiOnProfile} onHoverDist={setHoverDist} onPoiRemove={handlePoiRemove} />
+          <ElevationChart points={route?.points ?? []} units={units} pois={poiOnProfile} onHoverDist={setHoverDist} />
         </div>
       </main>
     </div>

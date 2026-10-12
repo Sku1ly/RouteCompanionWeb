@@ -15,16 +15,13 @@ interface Props {
   units: UnitMode;
   pois: ProfilePoi[];
   onHoverDist: (dist: number | null) => void;
-  onPoiRemove: (poi: ProfilePoi) => void;
 }
 
-export default function ElevationChart({ points, units, pois, onHoverDist, onPoiRemove }: Props) {
+export default function ElevationChart({ points, units, pois, onHoverDist }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [hover, setHover] = useState<{ x: number; ele: number; dist: number } | null>(null);
   const hoverRef = useRef(onHoverDist);
   hoverRef.current = onHoverDist;
-  const poiRemoveRef = useRef(onPoiRemove);
-  poiRemoveRef.current = onPoiRemove;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -171,31 +168,16 @@ export default function ElevationChart({ points, units, pois, onHoverDist, onPoi
       setHover(null);
       hoverRef.current(null);
     };
-    const onClick = (ev: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const px = ev.clientX - rect.left;
-      const py = ev.clientY - rect.top;
-      // hit-test POI flags (top strip of the chart)
-      for (const poi of pois) {
-        const poiX = x(poi.dist);
-        if (Math.abs(px - poiX) <= 8 && py <= 24) {
-          poiRemoveRef.current(poi);
-          return;
-        }
-      }
-    };
     canvas.addEventListener("mousemove", onMove);
     canvas.addEventListener("mouseleave", onLeave);
-    canvas.addEventListener("click", onClick);
     return () => {
       canvas.removeEventListener("mousemove", onMove);
       canvas.removeEventListener("mouseleave", onLeave);
-      canvas.removeEventListener("click", onClick);
     };
   }, [points, pois, units]);
 
   return (
-    <div className="elevation-wrap" title={pois.length ? "Click a POI flag to remove it" : undefined}>
+    <div className="elevation-wrap">
       {points.length < 2 ? (
         <div className="elevation-empty">No route yet</div>
       ) : (
