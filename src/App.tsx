@@ -62,6 +62,7 @@ export default function App() {
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const { units, setUnits } = useUnits();
   const [sheetCollapsed, setSheetCollapsed] = useState(false);
+  const [routePois, setRoutePois] = useState<{ lat: number; lon: number; name: string; emoji: string }[]>([]);
   const [isMobile, setIsMobile] = useState(
     () => window.matchMedia("(max-width: 800px)").matches
   );
@@ -110,7 +111,14 @@ export default function App() {
   }, []);
 
   const handleStopAddToRoute = useCallback(
-    (stop: { lat: number; lon: number; distAlong?: number }) => {
+    (stop: { lat: number; lon: number; distAlong?: number; name?: string; emoji?: string }) => {
+      setRoutePois((prev) => {
+        if (prev.some((p) => p.lat === stop.lat && p.lon === stop.lon)) return prev;
+        return [
+          ...prev,
+          { lat: stop.lat, lon: stop.lon, name: stop.name ?? "POI", emoji: stop.emoji ?? "📍" },
+        ];
+      });
       setWaypoints((prev) => {
         if (prev.length < 2) return [...prev, { lat: stop.lat, lon: stop.lon }];
         if (stop.distAlong == null) return [...prev, { lat: stop.lat, lon: stop.lon }];
@@ -146,6 +154,7 @@ export default function App() {
       ]);
       setWeather(null);
       setStops(null);
+      setRoutePois([]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Import failed");
     } finally {
@@ -217,6 +226,21 @@ export default function App() {
     }
     return marked;
   }, [stops, autoMarkKm]);
+
+  const poiOnProfile = useMemo(() => {
+    if (!route || routePois.length === 0) return [];
+    return routePois
+      .map((poi) => {
+        let best = { dist: 0, off: Infinity };
+        for (let i = 0; i < route.points.length; i++) {
+          const p = route.points[i];
+          const off = Math.hypot((p.lon - poi.lon) * 85, (p.lat - poi.lat) * 111) * 1000;
+          if (off < best.off) best = { dist: p.dist, off };
+        }
+        return { ...poi, dist: best.dist };
+      })
+      .sort((a, b) => a.dist - b.dist);
+  }, [route, routePois]);
 
   const kmMarks = useMemo(() => {
     if (!route || route.distance <= 0) return { ms: [] as number[], labels: [] as string[] };
@@ -343,7 +367,7 @@ export default function App() {
             <button className="btn btn-primary" onClick={doPlan} disabled={loading || waypoints.length < 2}>
               {loading ? "…" : "Plan route"}
             </button>
-            <button className="btn" onClick={() => { setWaypoints([]); setRoute(null); setWeather(null); setStops(null); }}>
+            <button className="btn" onClick={() => { setWaypoints([]); setRoute(null); setWeather(null); setStops(null); setRoutePois([]); }}>
               <><TrashIcon /> Clear</>
             </button>
           </div>
@@ -535,7 +559,7 @@ export default function App() {
           onStopAddToRoute={handleStopAddToRoute}
         />
         <div className="elevation-panel">
-          <ElevationChart points={route?.points ?? []} units={units} onHoverDist={setHoverDist} />
+          <ElevationChart points={route?.points ?? []} units={units} pois={poiOnProfile} onHoverDist={setHoverDist} />
         </div>
       </main>
     </div>

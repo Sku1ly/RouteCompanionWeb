@@ -1,14 +1,23 @@
 import { useRef, useEffect, useState } from "react";
 import type { RoutePoint } from "../lib/geo";
-import { fmtDistance, fmtElevation, M_PER_FT, M_PER_MI, type UnitMode } from "../lib/units";
+import { fmtDistance, fmtElevation, type UnitMode } from "../lib/units";
+
+export interface ProfilePoi {
+  lat: number;
+  lon: number;
+  name: string;
+  emoji: string;
+  dist: number;
+}
 
 interface Props {
   points: RoutePoint[];
   units: UnitMode;
+  pois: ProfilePoi[];
   onHoverDist: (dist: number | null) => void;
 }
 
-export default function ElevationChart({ points, units, onHoverDist }: Props) {
+export default function ElevationChart({ points, units, pois, onHoverDist }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [hover, setHover] = useState<{ x: number; ele: number; dist: number } | null>(null);
   const hoverRef = useRef(onHoverDist);
@@ -89,6 +98,52 @@ export default function ElevationChart({ points, units, onHoverDist }: Props) {
     ctx.setLineDash([]);
     ctx.textAlign = "left";
 
+    // POI markers (stops added to the route)
+    for (const poi of pois) {
+      const px = x(poi.dist);
+      ctx.strokeStyle = "rgba(217, 70, 239, 0.8)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(px, 18);
+      ctx.lineTo(px, H - 18);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(px, 18, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(217, 70, 239, 1)";
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      const label = `${poi.emoji} ${poi.name} · ${fmtDistance(poi.dist, units)}`;
+      ctx.font = "10px system-ui";
+      const tw = ctx.measureText(label).width;
+      const labelX = Math.min(Math.max(px, tw / 2 + 4), W - tw / 2 - 4);
+      ctx.fillStyle = "rgba(217, 70, 239, 0.92)";
+      ctx.beginPath();
+      const pad = 4;
+      const bw = tw + pad * 2;
+      const bx = labelX - bw / 2;
+      const by = 4;
+      const bh = 15;
+      const rr = 4;
+      ctx.moveTo(bx + rr, by);
+      ctx.lineTo(bx + bw - rr, by);
+      ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + rr);
+      ctx.lineTo(bx + bw, by + bh - rr);
+      ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - rr, by + bh);
+      ctx.lineTo(bx + rr, by + bh);
+      ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - rr);
+      ctx.lineTo(bx, by + rr);
+      ctx.quadraticCurveTo(bx, by, bx + rr, by);
+      ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.fillText(label, labelX, by + 11);
+      ctx.textAlign = "left";
+    }
+
     const onMove = (ev: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       const px = ev.clientX - rect.left;
@@ -119,7 +174,7 @@ export default function ElevationChart({ points, units, onHoverDist }: Props) {
       canvas.removeEventListener("mousemove", onMove);
       canvas.removeEventListener("mouseleave", onLeave);
     };
-  }, [points]);
+  }, [points, pois, units]);
 
   return (
     <div className="elevation-wrap">
