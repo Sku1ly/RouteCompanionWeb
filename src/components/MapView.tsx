@@ -275,7 +275,7 @@ export default function MapView({
         popupEl.appendChild(textEl);
         const btn = document.createElement("button");
         btn.className = "btn btn-primary stop-add-btn";
-        btn.textContent = "➕ Add to route";
+        btn.textContent = "Add to route";
         btn.onclick = (bev) => {
           bev.stopPropagation();
           addStopRef.current(s);

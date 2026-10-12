@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapView from "./components/MapView";
+import { ImportIcon, ExportIcon, TrashIcon, RouteIcon } from "./components/icons";
 import ElevationChart from "./components/ElevationChart";
 import type { LatLng, PlannedRoute } from "./lib/geo";
 import { formatDistance } from "./lib/geo";
@@ -247,7 +248,7 @@ export default function App() {
           />
         )}
         <header className="brand">
-          <h1>🗺️ Route Companion</h1>
+          <h1><RouteIcon size={20} /> Route Companion</h1>
           <p className="tagline">Plan it. Check it. Ride it.</p>
           <div className="theme-toggle">
             {(["auto", "light", "dark"] as ThemeMode[]).map((m) => (
@@ -280,7 +281,7 @@ export default function App() {
 
         <div className="file-row">
           <button className="btn" onClick={() => fileRef.current?.click()}>
-            📂 Import GPX/TCX
+            <ImportIcon /> Import
           </button>
           <input
             ref={fileRef}
@@ -294,7 +295,7 @@ export default function App() {
             }}
           />
           <button className="btn" disabled={!route} onClick={doExport}>
-            ⬇️ Export GPX
+            <ExportIcon /> Export
           </button>
         </div>
 
@@ -331,7 +332,7 @@ export default function App() {
               {loading ? "…" : "Plan route"}
             </button>
             <button className="btn" onClick={() => { setWaypoints([]); setRoute(null); setWeather(null); setStops(null); }}>
-              🗑️ Clear
+              <><TrashIcon /> Clear</>
             </button>
           </div>
           <p className="hint">{waypoints.length} waypoint{waypoints.length === 1 ? "" : "s"}</p>
@@ -354,7 +355,7 @@ export default function App() {
               className={`tab ${tab === t ? "tab-on" : ""}`}
               onClick={() => setTab(t)}
             >
-              {t === "plan" ? "Route" : t === "weather" ? "🌤️ Weather" : t === "stops" ? "📍 Stops" : "🍎 Fuel"}
+              {t === "plan" ? "Route" : t === "weather" ? "Weather" : t === "stops" ? "Stops" : "Fuel"}
             </button>
           ))}
         </nav>

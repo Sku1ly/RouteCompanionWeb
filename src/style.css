@@ -47,7 +47,12 @@ html, body, #root { height: 100%; margin: 0; }
   }
 }
 
-body { font-family: system-ui, -apple-system, sans-serif; color: var(--text); }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+h1 svg { vertical-align: -3px; margin-right: 4px; color: var(--accent); }
 
 .app { display: flex; height: 100%; }
 .sidebar {
@@ -82,22 +87,42 @@ body { font-family: system-ui, -apple-system, sans-serif; color: var(--text); }
 .field input[type="number"] { padding: 6px; border: 1px solid var(--border2); border-radius: 8px; background: var(--panel); color: var(--text); }
 
 .btn {
-  padding: 8px 12px; border: 1px solid var(--border2); border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 14px; border: 1px solid var(--border2); border-radius: 10px;
   background: var(--panel); color: var(--text); cursor: pointer; font-size: 14px;
+  font-weight: 500; line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
 }
-.btn:hover:not(:disabled) { background: var(--hover); }
-.btn:disabled { opacity: 0.5; cursor: default; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-.btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+.btn svg { flex: none; opacity: 0.75; }
+.btn:hover:not(:disabled) {
+  background: var(--hover);
+  border-color: var(--accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.btn:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn-primary {
+  background: linear-gradient(180deg, var(--accent), var(--accent-dark));
+  border-color: var(--accent-dark); color: #fff; font-weight: 600;
+  box-shadow: 0 1px 3px rgba(8, 145, 178, 0.35);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-dark);
+  box-shadow: 0 3px 10px rgba(8, 145, 178, 0.4);
+}
+.btn-primary svg { opacity: 1; }
 
 .profile-row, .plan-row { display: flex; flex-wrap: wrap; gap: 6px; }
 .plan-row { align-items: center; }
 
 .chip {
-  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border2);
-  background: var(--panel); font-size: 13px; cursor: pointer; user-select: none;
-  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border2);
+  background: var(--panel); font-size: 13px; font-weight: 500; cursor: pointer; user-select: none;
+  display: inline-flex; align-items: center; gap: 5px; line-height: 1.2;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
+.chip:hover { border-color: var(--accent); }
 .chip input { display: none; }
 .chip-on { background: var(--chip-on-bg); border-color: var(--accent); color: var(--chip-on-text); font-weight: 600; }
 
@@ -115,12 +140,18 @@ body { font-family: system-ui, -apple-system, sans-serif; color: var(--text); }
 .stat-num { font-weight: 700; font-size: 15px; }
 .stat-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; }
 
-.tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+.tabs { display: flex; gap: 2px; background: var(--stat-bg); border: 1px solid var(--border); padding: 3px; border-radius: 12px; }
 .tab {
-  flex: 1; padding: 7px 4px; border: none; background: none; cursor: pointer;
-  font-size: 13px; border-radius: 8px; color: var(--muted2);
+  flex: 1; padding: 8px 4px; border: none; background: none; cursor: pointer;
+  font-size: 13px; font-weight: 500; border-radius: 9px; color: var(--muted2); line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
-.tab-on { background: var(--tab-on-bg); color: var(--tab-on-text); font-weight: 600; }
+.tab:hover { color: var(--text); }
+.tab-on {
+  background: var(--panel); color: var(--accent-dark);
+  font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border);
+}
 
 .panel { display: flex; flex-direction: column; gap: 10px; }
 
