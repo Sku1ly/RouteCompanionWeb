@@ -172,8 +172,10 @@ export default function App() {
       id: s.id,
       lat: s.lat,
       lon: s.lon,
-      name: `${s.name} (${s.type.label}, ${(s.dist / 1000).toFixed(1)} km)`,
+      name: s.name,
       emoji: s.type.emoji,
+      distAlong: s.dist,
+      offRoute: s.offRoute,
     }));
   }, [stops, autoMarked]);
 

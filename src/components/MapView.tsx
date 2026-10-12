@@ -21,10 +21,20 @@ const OSM_STYLE = {
   ],
 };
 
+interface StopMarkerData {
+  id: string;
+  lat: number;
+  lon: number;
+  name: string;
+  emoji: string;
+  distAlong?: number; // meters along route
+  offRoute?: number; // meters from route line
+}
+
 interface MapViewProps {
   routePoints: { lat: number; lon: number }[];
   waypoints: { lat: number; lon: number }[];
-  stops: { id: string; lat: number; lon: number; name: string; emoji: string }[];
+  stops: StopMarkerData[];
   planningMode: boolean;
   focusPoint: { lat: number; lon: number } | null;
   onMapClick: (lat: number, lon: number) => void;
@@ -132,6 +142,20 @@ export default function MapView({
       el.className = "stop-marker";
       el.textContent = s.emoji;
       el.title = s.name;
+      el.onclick = (ev) => {
+        ev.stopPropagation();
+        const parts = [s.name];
+        if (s.distAlong != null) parts.push(`${(s.distAlong / 1000).toFixed(1)} km along route`);
+        if (s.offRoute != null) parts.push(`${Math.round(s.offRoute)} m off route`);
+        const popupEl = document.createElement("div");
+        popupEl.className = "stop-popup";
+        popupEl.textContent = parts.join(" · ");
+        new maplibregl.Popup({ closeOnClick: true, offset: 24 })
+          .setLngLat([s.lon, s.lat])
+          .setDOMContent(popupEl)
+          .addTo(map);
+        map.easeTo({ center: [s.lon, s.lat], zoom: Math.max(map.getZoom(), 14), duration: 400 });
+      };
       return new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(map);
     });
   }, [stops, ready]);
