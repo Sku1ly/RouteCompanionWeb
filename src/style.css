@@ -48,7 +48,9 @@ html, body, #root { height: 100%; margin: 0; }
 }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  font-variant-ligatures: contextual;
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
