@@ -102,8 +102,49 @@ function arrowFeatures(
   return features;
 }
 
+function interpolateAtDistance(
+  points: { lat: number; lon: number; dist: number }[],
+  d: number
+): { lat: number; lon: number } {
+  let lo = 0;
+  let hi = points.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (points[mid].dist < d) lo = mid + 1;
+    else hi = mid;
+  }
+  const p2 = points[lo];
+  const p1 = points[lo - 1] ?? p2;
+  const seg = p2.dist - p1.dist;
+  const t = seg > 0 ? (d - p1.dist) / seg : 0;
+  return { lat: p1.lat + (p2.lat - p1.lat) * t, lon: p1.lon + (p2.lon - p1.lon) * t };
+}
+
+function makeKmBadgeImageData(dark: boolean): { width: number; height: number; data: Uint8Array } {
+  const S = 30;
+  const canvas = document.createElement("canvas");
+  canvas.width = S;
+  canvas.height = S;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, S, S);
+  ctx.beginPath();
+  ctx.arc(S / 2, S / 2, S / 2 - 1, 0, Math.PI * 2);
+  ctx.fillStyle = dark ? "#1e293b" : "#ffffff";
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = dark ? "#22d3ee" : "#0891b2";
+  ctx.stroke();
+  ctx.fillStyle = dark ? "#e2e8f0" : "#0f172a";
+  ctx.font = "bold 11px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("5", S / 2, S / 2 + 1);
+  const imageData = ctx.getImageData(0, 0, S, S);
+  return { width: S, height: S, data: new Uint8Array(imageData.data.buffer) };
+}
+
 interface MapViewProps {
-  routePoints: { lat: number; lon: number }[];
+  routePoints: { lat: number; lon: number; dist: number }[];
   waypoints: { lat: number; lon: number }[];
   stops: StopMarkerData[];
   planningMode: boolean;
@@ -113,6 +154,8 @@ interface MapViewProps {
   onMapClick: (lat: number, lon: number) => void;
   onWaypointRemove: (index: number) => void;
   onStopAddToRoute: (stop: StopMarkerData) => void;
+  kmMarkersM: number[]; // cumulative meters positions for distance badges
+  kmLabels: string[]; // matching labels per badge index
 }
 
 export default function MapView({
@@ -126,6 +169,8 @@ export default function MapView({
   onMapClick,
   onWaypointRemove,
   onStopAddToRoute,
+  kmMarkersM,
+  kmLabels,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -174,6 +219,35 @@ export default function MapView({
       map.addSource("route-arrows", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
+      });
+      if (map.hasImage("km-badge")) map.removeImage("km-badge");
+      map.addImage("km-badge", makeKmBadgeImageData(isDarkRef.current));
+      map.addSource("route-km-marks", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "route-km-badge-layer",
+        type: "symbol",
+        source: "route-km-marks",
+        layout: {
+          "icon-image": "km-badge",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 12, 0.8, 16, 1],
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+          "text-field": ["get", "label"],
+          "text-font": ["Noto Sans Regular", "Noto Sans Bold"],
+          "text-size": 11,
+          "text-offset": [0, -1.6],
+          "text-anchor": "bottom",
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-color": "#0f172a",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.5,
+        },
+        filter: ["==", ["get", "showLabel"], true],
       });
       map.addLayer({
         id: "route-arrows-layer",
@@ -234,7 +308,22 @@ export default function MapView({
       type: "FeatureCollection",
       features: arrowFeatures(routePoints),
     });
-  }, [routePoints, ready]);
+    const kmSrc = map.getSource("route-km-marks") as maplibregl.GeoJSONSource | undefined;
+    if (kmSrc) {
+      const features: GeoJSON.Feature<GeoJSON.Point>[] = []
+      for (let i = 0; i < kmMarkersM.length && i < routePoints.length; i++) {
+        const d = kmMarkersM[i];
+        if (d <= 0 || d >= (routePoints[routePoints.length - 1]?.dist ?? 0)) continue;
+        const latlon = interpolateAtDistance(routePoints, d);
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [latlon.lon, latlon.lat] },
+          properties: { label: kmLabels[i], showLabel: i % 2 === 1 },
+        });
+      }
+      kmSrc.setData({ type: "FeatureCollection", features });
+    }
+  }, [routePoints, ready, kmMarkersM, kmLabels]);
 
   useEffect(() => {
     const map = mapRef.current;

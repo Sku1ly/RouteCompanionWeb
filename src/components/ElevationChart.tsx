@@ -70,6 +70,25 @@ export default function ElevationChart({ points, units, onHoverDist }: Props) {
     ctx.fillText(fmtElevation(minE, units), 6, H - 12);
     ctx.fillText(fmtElevation(maxE, units), 6, 14);
 
+    // distance axis: gridline + label every `stepM` meters
+    const stepM = units === "imperial" ? 5 * 1609.344 : 5000;
+    ctx.strokeStyle = "rgba(100, 116, 139, 0.35)";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.font = "10px system-ui";
+    ctx.textAlign = "center";
+    for (let d = stepM; d < total; d += stepM) {
+      const px = x(d);
+      ctx.beginPath();
+      ctx.moveTo(px, 18);
+      ctx.lineTo(px, H - 18);
+      ctx.stroke();
+      ctx.fillStyle = "#64748b";
+      ctx.fillText(fmtDistance(d, units), px, H - 6);
+    }
+    ctx.setLineDash([]);
+    ctx.textAlign = "left";
+
     const onMove = (ev: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
       const px = ev.clientX - rect.left;

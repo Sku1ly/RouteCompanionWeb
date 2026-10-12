@@ -218,6 +218,18 @@ export default function App() {
     return marked;
   }, [stops, autoMarkKm]);
 
+  const kmMarks = useMemo(() => {
+    if (!route || route.distance <= 0) return { ms: [] as number[], labels: [] as string[] };
+    const stepM = units === "imperial" ? 5 * 1609.344 : 5000;
+    const ms: number[] = [];
+    const labels: string[] = [];
+    for (let d = stepM; d < route.distance; d += stepM) {
+      ms.push(d);
+      labels.push(fmtDistance(d, units));
+    }
+    return { ms, labels };
+  }, [route, units]);
+
   const fuel = useMemo(() => {
     if (!route || !weather) return null;
     const avgTemp = weather.reduce((a, w) => a + w.temp, 0) / weather.length;
@@ -516,6 +528,8 @@ export default function App() {
           focusPoint={focusPoint}
           isDark={isDark}
           units={units}
+          kmMarkersM={kmMarks.ms}
+          kmLabels={kmMarks.labels}
           onMapClick={addWaypoint}
           onWaypointRemove={removeWaypoint}
           onStopAddToRoute={handleStopAddToRoute}
