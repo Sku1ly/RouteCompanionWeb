@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapView from "./components/MapView";
 import ElevationChart from "./components/ElevationChart";
 import type { LatLng, PlannedRoute } from "./lib/geo";
@@ -60,6 +60,17 @@ export default function App() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const { units, setUnits } = useUnits();
+  const [sheetCollapsed, setSheetCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia("(max-width: 800px)").matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 800px)");
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const generateRoute = useCallback(
     async (wps: LatLng[], prof: Profile, name: string) => {
@@ -227,7 +238,14 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
+      <aside className={`sidebar ${sheetCollapsed && isMobile ? "collapsed" : ""}`}>
+        {isMobile && (
+          <button
+            className="sheet-handle"
+            onClick={() => setSheetCollapsed((v) => !v)}
+            title={sheetCollapsed ? "Show controls" : "Hide controls"}
+          />
+        )}
         <header className="brand">
           <h1>🗺️ Route Companion</h1>
           <p className="tagline">Plan it. Check it. Ride it.</p>

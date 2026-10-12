@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { fmtDistance, type UnitMode } from "../lib/units";
 
 const LIGHT_STYLE = "https://tiles.openfreemap.org/styles/liberty";
-const DARK_STYLE = "https://tiles.openfreemap.org/styles/dark";
+const DARK_STYLE = "https://tiles.openfreemap.org/styles/fiord";
 
 function styleUrl(dark: boolean): string {
   return dark ? DARK_STYLE : LIGHT_STYLE;
@@ -21,7 +21,7 @@ interface StopMarkerData {
 
 const ARROW_SIZE = 28;
 
-function makeArrowImageData(): { width: number; height: number; data: Uint8Array } {
+function makeArrowImageData(dark: boolean): { width: number; height: number; data: Uint8Array } {
   const canvas = document.createElement("canvas");
   canvas.width = ARROW_SIZE;
   canvas.height = ARROW_SIZE;
@@ -36,8 +36,8 @@ function makeArrowImageData(): { width: number; height: number; data: Uint8Array
   ctx.lineTo(cx, ARROW_SIZE - 12);
   ctx.lineTo(cx - 9, ARROW_SIZE - 6);
   ctx.closePath();
-  ctx.fillStyle = "rgba(8, 145, 178, 1)";
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.fillStyle = dark ? "rgba(34, 211, 238, 1)" : "rgba(8, 145, 178, 1)";
+  ctx.strokeStyle = dark ? "rgba(15, 23, 42, 0.9)" : "rgba(255, 255, 255, 0.9)";
   ctx.lineWidth = 3;
   ctx.stroke();
   ctx.fill();
@@ -169,7 +169,8 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !ready) return;
     if (!map.getSource("route")) {
-      map.addImage("arrow-icon", makeArrowImageData());
+      if (map.hasImage("arrow-icon")) map.removeImage("arrow-icon");
+      map.addImage("arrow-icon", makeArrowImageData(isDarkRef.current));
       map.addSource("route-arrows", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -196,19 +197,27 @@ export default function MapView({
         type: "geojson",
         data: { type: "Feature", geometry: { type: "LineString", coordinates: [] }, properties: {} },
       });
+      const dark = isDarkRef.current;
       map.addLayer({
         id: "route-casing",
         type: "line",
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#0e7490", "line-width": 8, "line-opacity": 0.25 },
+        paint: {
+          "line-color": dark ? "#67e8f9" : "#0e7490",
+          "line-width": 8,
+          "line-opacity": 0.3,
+        },
       });
       map.addLayer({
         id: "route-line",
         type: "line",
         source: "route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#0891b2", "line-width": 4 },
+        paint: {
+          "line-color": dark ? "#22d3ee" : "#0891b2",
+          "line-width": 4,
+        },
       });
     }
     const src = map.getSource("route") as maplibregl.GeoJSONSource;
