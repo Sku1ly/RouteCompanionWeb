@@ -110,6 +110,7 @@ interface MapViewProps {
   isDark: boolean;
   onMapClick: (lat: number, lon: number) => void;
   onWaypointRemove: (index: number) => void;
+  onStopAddToRoute: (stop: StopMarkerData) => void;
 }
 
 export default function MapView({
@@ -121,6 +122,7 @@ export default function MapView({
   isDark,
   onMapClick,
   onWaypointRemove,
+  onStopAddToRoute,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -135,6 +137,8 @@ export default function MapView({
   const isDarkRef = useRef(isDark);
   isDarkRef.current = isDark;
   const styleDarkRef = useRef<boolean | null>(null);
+  const addStopRef = useRef(onStopAddToRoute);
+  addStopRef.current = onStopAddToRoute;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -252,7 +256,17 @@ export default function MapView({
         if (s.offRoute != null) parts.push(`${Math.round(s.offRoute)} m off route`);
         const popupEl = document.createElement("div");
         popupEl.className = "stop-popup";
-        popupEl.textContent = parts.join(" · ");
+        const textEl = document.createElement("div");
+        textEl.textContent = parts.join(" · ");
+        popupEl.appendChild(textEl);
+        const btn = document.createElement("button");
+        btn.className = "btn btn-primary stop-add-btn";
+        btn.textContent = "➕ Add to route";
+        btn.onclick = (bev) => {
+          bev.stopPropagation();
+          addStopRef.current(s);
+        };
+        popupEl.appendChild(btn);
         new maplibregl.Popup({ closeOnClick: true, offset: 24 })
           .setLngLat([s.lon, s.lat])
           .setDOMContent(popupEl)

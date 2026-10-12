@@ -83,6 +83,23 @@ export default function App() {
     setWaypoints((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const handleStopAddToRoute = useCallback(
+    (stop: { lat: number; lon: number; distAlong?: number }) => {
+      setWaypoints((prev) => {
+        if (prev.length < 2) return [...prev, { lat: stop.lat, lon: stop.lon }];
+        if (stop.distAlong == null) return [...prev, { lat: stop.lat, lon: stop.lon }];
+        // insert as via-waypoint at the position matching its distance along the route
+        const total = route?.distance ?? 0;
+        const frac = total > 0 ? stop.distAlong / total : 1;
+        const insertAt = Math.max(1, Math.min(prev.length, Math.round(frac * (prev.length - 1)) + 1));
+        const next = [...prev];
+        next.splice(insertAt, 0, { lat: stop.lat, lon: stop.lon });
+        return next;
+      });
+    },
+    [route]
+  );
+
   const doPlan = () => generateRoute(waypoints, profile, routeName);
 
   const onImport = async (file: File) => {
@@ -442,6 +459,7 @@ export default function App() {
           isDark={isDark}
           onMapClick={addWaypoint}
           onWaypointRemove={removeWaypoint}
+          onStopAddToRoute={handleStopAddToRoute}
         />
         <div className="elevation-panel">
           <ElevationChart points={route?.points ?? []} onHoverDist={setHoverDist} />
