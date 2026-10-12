@@ -3,6 +3,17 @@ import MapView from "./components/MapView";
 import ElevationChart from "./components/ElevationChart";
 import type { LatLng, PlannedRoute } from "./lib/geo";
 import { formatDistance } from "./lib/geo";
+import {
+  useUnits,
+  fmtDistance,
+  fmtElevation,
+  fmtTemp,
+  fmtSpeed,
+  fmtFluids,
+  fmtRate,
+  M_PER_FT,
+  M_PER_MI,
+} from "./lib/units";
 import { buildRoute, type Profile } from "./lib/routing";
 import { parseRouteFile, exportGpx, type GpxWaypoint } from "./lib/files";
 import { fetchRouteWeather, type WeatherStop } from "./lib/weather";
@@ -33,7 +44,9 @@ export default function App() {
   const [hoverDist, setHoverDist] = useState<number | null>(null);
 
   const [weather, setWeather] = useState<WeatherStop[] | null>(null);
-  const [weatherSpeed, setWeatherSpeed] = useState(25);
+  const [weatherSpeed, setWeatherSpeed] = useState(25); // always km/h internally
+
+  const fmtKm = (km: number) => fmtDistance(km * 1000, units);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
   const [stops, setStops] = useState<Stop[] | null>(null);
@@ -46,6 +59,7 @@ export default function App() {
   const [effort, setEffort] = useState<"easy" | "moderate" | "hard">("moderate");
   const fileRef = useRef<HTMLInputElement | null>(null);
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
+  const { units, setUnits } = useUnits();
 
   const generateRoute = useCallback(
     async (wps: LatLng[], prof: Profile, name: string) => {
@@ -131,11 +145,11 @@ export default function App() {
     if (!route) return;
     const list = autoMarked ?? stops ?? [];
     const wpts: GpxWaypoint[] = list.map((s) => {
-      const remainingKm = Math.max(0, Math.round((route.distance - s.dist) / 1000));
+      const remainingM = Math.max(0, route.distance - s.dist);
       return {
         lat: s.lat,
         lon: s.lon,
-        name: `${s.type.emoji} ${s.name} · ${remainingKm} km to go`,
+        name: `${s.type.emoji} ${s.name} · ${fmtDistance(remainingM, units)} to go`,
         symbol: gpxSymbol(s.type.id),
       };
     });
@@ -228,6 +242,21 @@ export default function App() {
                 {m === "auto" ? "🌓" : m === "light" ? "☀️" : "🌙"}
               </button>
             ))}
+            <span className="toggle-divider" />
+            <button
+              className={`chip ${units === "metric" ? "chip-on" : ""}`}
+              onClick={() => setUnits("metric")}
+              title="Metric: km, m, °C"
+            >
+              km/m
+            </button>
+            <button
+              className={`chip ${units === "imperial" ? "chip-on" : ""}`}
+              onClick={() => setUnits("imperial")}
+              title="Imperial: mi, ft, °F"
+            >
+              mi/ft
+            </button>
           </div>
         </header>
 
@@ -292,9 +321,9 @@ export default function App() {
 
         {route && (
           <div className="route-stats">
-            <div><span className="stat-num">{formatDistance(route.distance)}</span><span className="stat-lbl">distance</span></div>
-            <div><span className="stat-num">↑{Math.round(route.ascent)} m</span><span className="stat-lbl">ascent</span></div>
-            <div><span className="stat-num">↓{Math.round(route.descent)} m</span><span className="stat-lbl">descent</span></div>
+            <div><span className="stat-num">{fmtDistance(route.distance, units)}</span><span className="stat-lbl">distance</span></div>
+            <div><span className="stat-num">↑{fmtElevation(route.ascent, units)}</span><span className="stat-lbl">ascent</span></div>
+            <div><span className="stat-num">↓{fmtElevation(route.descent, units)}</span><span className="stat-lbl">descent</span></div>
           </div>
         )}
 
@@ -315,7 +344,7 @@ export default function App() {
         {tab === "weather" && (
           <section className="panel">
             <div className="field">
-              <label>Planned avg speed: {weatherSpeed} km/h</label>
+              <label>Planned avg speed: {fmtSpeed(weatherSpeed, units)}</label>
               <input
                 type="range"
                 min={5}
@@ -333,9 +362,9 @@ export default function App() {
                   <li key={i} className="wx-item" onClick={() => setFocusPoint(route ? pointOnRoute(route, w.dist) : null)}>
                     <span className="wx-emoji">{w.emoji}</span>
                     <span className="wx-main">
-                      <strong>{(w.dist / 1000).toFixed(0)} km</strong> · {w.temp}°C
+                      <strong>{fmtKm(w.dist / 1000)}</strong> · {fmtTemp(w.temp, units)}
                       <span className={`wx-wind ${w.relativeWind > 5 ? "head" : w.relativeWind < -5 ? "tail" : ""}`}>
-                        {w.relativeWind > 5 ? "⬆" : w.relativeWind < -5 ? "⬇" : "↕"} {Math.abs(w.relativeWind)} km/h
+                        {w.relativeWind > 5 ? "⬆" : w.relativeWind < -5 ? "⬇" : "↕"} {fmtSpeed(Math.abs(w.relativeWind), units)}
                       </span>
                     </span>
                     <span className="wx-side">
@@ -371,7 +400,7 @@ export default function App() {
               ))}
             </div>
             <div className="field">
-              <label>Corridor: {corridorM} m each side</label>
+              <label>Corridor: {fmtDistance(corridorM, units)} each side</label>
               <input
                 type="range"
                 min={100}
@@ -382,13 +411,23 @@ export default function App() {
               />
             </div>
             <div className="field">
-              <label>Auto-Mark interval (km, 0 = off)</label>
+              <label>Auto-Mark interval ({units === "imperial" ? "miles" : "km"}, 0 = off)</label>
               <input
                 type="number"
                 min={0}
-                step={5}
-                value={autoMarkKm ?? 0}
-                onChange={(e) => setAutoMarkKm(Number(e.target.value) > 0 ? Number(e.target.value) : null)}
+                step={units === "imperial" ? 2 : 5}
+                value={
+                  autoMarkKm == null
+                    ? 0
+                    : units === "imperial"
+                      ? Math.round(autoMarkKm / 1.609344)
+                      : autoMarkKm
+                }
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (v <= 0) return setAutoMarkKm(null);
+                  setAutoMarkKm(units === "imperial" ? v * 1.609344 : v);
+                }}
               />
             </div>
             <button className="btn btn-primary" disabled={!route || stopsLoading} onClick={doStops}>
@@ -403,7 +442,7 @@ export default function App() {
                       <span>{s.type.emoji}</span>
                       <span className="stop-name">{s.name}</span>
                       <span className="stop-meta">
-                        {(s.dist / 1000).toFixed(1)} km · {Math.round(s.offRoute)} m off
+                        {fmtDistance(s.dist, units)} · {fmtDistance(s.offRoute, units)} off
                       </span>
                     </li>
                   ))}
@@ -435,8 +474,8 @@ export default function App() {
                 <div className="fuel-card"><span>{fuel.hours} h</span><label>duration est.</label></div>
                 <div className="fuel-card"><span>{fuel.carbsPerHour} g/h</span><label>carbs</label></div>
                 <div className="fuel-card"><span>{fuel.totalCarbsG} g</span><label>total carbs</label></div>
-                <div className="fuel-card"><span>{(fuel.totalWaterMl / 1000).toFixed(1)} L</span><label>fluids</label></div>
-                <div className="fuel-card"><span>{fuel.hydrationMlPerHour} ml/h</span><label>drink rate</label></div>
+                <div className="fuel-card"><span>{fmtFluids(fuel.totalWaterMl, units)}</span><label>fluids</label></div>
+                <div className="fuel-card"><span>{fmtRate(fuel.hydrationMlPerHour, units)}</span><label>drink rate</label></div>
                 <div className="fuel-card"><span>{fuel.drinkMixServings}</span><label>bottle servings</label></div>
                 <div className="fuel-card"><span>{fuel.bars}</span><label>bars</label></div>
                 <div className="fuel-card"><span>{fuel.gels}</span><label>gels</label></div>
@@ -457,12 +496,13 @@ export default function App() {
           planningMode={planningMode}
           focusPoint={focusPoint}
           isDark={isDark}
+          units={units}
           onMapClick={addWaypoint}
           onWaypointRemove={removeWaypoint}
           onStopAddToRoute={handleStopAddToRoute}
         />
         <div className="elevation-panel">
-          <ElevationChart points={route?.points ?? []} onHoverDist={setHoverDist} />
+          <ElevationChart points={route?.points ?? []} units={units} onHoverDist={setHoverDist} />
         </div>
       </main>
     </div>

@@ -64,7 +64,8 @@ body { font-family: system-ui, -apple-system, sans-serif; color: var(--text); }
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
 .brand h1 { font-size: 20px; margin: 0; }
-.theme-toggle { display: flex; gap: 4px; margin-top: 6px; }
+.theme-toggle { display: flex; gap: 4px; margin-top: 6px; align-items: center; }
+.toggle-divider { width: 1px; height: 18px; background: var(--border2); margin: 0 4px; }
 .theme-toggle .chip { padding: 3px 8px; font-size: 14px; }
 .tagline { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
 

@@ -1,5 +1,6 @@
 import maplibregl from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
+import { fmtDistance, type UnitMode } from "../lib/units";
 
 const LIGHT_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const DARK_STYLE = "https://tiles.openfreemap.org/styles/dark";
@@ -108,6 +109,7 @@ interface MapViewProps {
   planningMode: boolean;
   focusPoint: { lat: number; lon: number } | null;
   isDark: boolean;
+  units: UnitMode;
   onMapClick: (lat: number, lon: number) => void;
   onWaypointRemove: (index: number) => void;
   onStopAddToRoute: (stop: StopMarkerData) => void;
@@ -120,6 +122,7 @@ export default function MapView({
   planningMode,
   focusPoint,
   isDark,
+  units,
   onMapClick,
   onWaypointRemove,
   onStopAddToRoute,
@@ -139,6 +142,8 @@ export default function MapView({
   const styleDarkRef = useRef<boolean | null>(null);
   const addStopRef = useRef(onStopAddToRoute);
   addStopRef.current = onStopAddToRoute;
+  const unitsRef = useRef(units);
+  unitsRef.current = units;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -252,8 +257,8 @@ export default function MapView({
       el.onclick = (ev) => {
         ev.stopPropagation();
         const parts = [s.name];
-        if (s.distAlong != null) parts.push(`${(s.distAlong / 1000).toFixed(1)} km along route`);
-        if (s.offRoute != null) parts.push(`${Math.round(s.offRoute)} m off route`);
+        if (s.distAlong != null) parts.push(`${fmtDistance(s.distAlong, unitsRef.current)} along route`);
+        if (s.offRoute != null) parts.push(`${fmtDistance(s.offRoute, unitsRef.current)} off route`);
         const popupEl = document.createElement("div");
         popupEl.className = "stop-popup";
         const textEl = document.createElement("div");

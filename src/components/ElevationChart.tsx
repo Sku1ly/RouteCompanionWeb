@@ -1,12 +1,14 @@
 import { useRef, useEffect, useState } from "react";
 import type { RoutePoint } from "../lib/geo";
+import { fmtDistance, fmtElevation, M_PER_FT, M_PER_MI, type UnitMode } from "../lib/units";
 
 interface Props {
   points: RoutePoint[];
+  units: UnitMode;
   onHoverDist: (dist: number | null) => void;
 }
 
-export default function ElevationChart({ points, onHoverDist }: Props) {
+export default function ElevationChart({ points, units, onHoverDist }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [hover, setHover] = useState<{ x: number; ele: number; dist: number } | null>(null);
   const hoverRef = useRef(onHoverDist);
@@ -65,8 +67,8 @@ export default function ElevationChart({ points, onHoverDist }: Props) {
 
     ctx.fillStyle = "#64748b";
     ctx.font = "11px system-ui";
-    ctx.fillText(`${Math.round(minE)} m`, 6, H - 12);
-    ctx.fillText(`${Math.round(maxE)} m`, 6, 14);
+    ctx.fillText(fmtElevation(minE, units), 6, H - 12);
+    ctx.fillText(fmtElevation(maxE, units), 6, 14);
 
     const onMove = (ev: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -109,7 +111,7 @@ export default function ElevationChart({ points, onHoverDist }: Props) {
       )}
       {hover && (
         <div className="elevation-tip" style={{ left: hover.x }}>
-          {Math.round(hover.ele)} m · {(hover.dist / 1000).toFixed(1)} km
+          {fmtElevation(hover.ele, units)} · {fmtDistance(hover.dist, units)}
         </div>
       )}
     </div>
